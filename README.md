@@ -20,6 +20,10 @@ ___
 
 ___
 
+### Store Data
+Data to be stored in the Duke Box, not in this repository:
+https://duke.app.box.com/folder/361082889246?s=nggecd1enqpmz28wdk4jf7xjidw6crw0
+
 ### Neural Network
 #### Train Data
 python src/nn/nn_train.py --csv data/nn_sample_data.csv --epochs 100 --lr 1e-3

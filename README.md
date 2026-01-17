@@ -1,16 +1,18 @@
 # Acoustics V2
-## One - Time SETUP (ONLY SUPPORTING MAC + WINDOWS rn)
-Clone Repo
-Open Saleae standalone
---> Click Options drop down in top right corner
---> Click Preferences
---> Click Developer Tab
---> Click Option to Enable Scripting Socket Server
 
-https://support.saleae.com/product/logic-software/legacy-software/older-software-releases
-./Logic-1.2.40-Linux.AppImage --appimage-extract
+___
 
-Create a new python enviornment and download requirements.txt
+## One Time SETUP (ONLY SUPPORTING MAC + WINDOWS rn)
+1. Clone Repo
+2. Open Saleae standalone
+3. Click Options drop down in top right corner
+4. Click Preferences
+5. Click Developer Tab
+6. Click Option to Enable Scripting Socket Server
+7. Download needed software (.AppImage or .dmg):
+  - https://support.saleae.com/product/logic-software/legacy-software/older-software-releases
+  - ./Logic-1.2.40-Linux.AppImage --appimage-extract
+8. Create a new python enviornment and pip install requirements.txt
 
 ___
 
@@ -39,3 +41,4 @@ ___
 
 ## TODO
 - Fix timing, currently time values are slightly off from true time
+- Organize files within repo

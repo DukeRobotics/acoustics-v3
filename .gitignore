@@ -4,3 +4,5 @@
 *.exe
 *.dmg
 *.AppImage
+__pycache__/
+*.pyc

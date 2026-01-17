@@ -1,1 +1,6 @@
+*.csv
+*.bin
+*.log
 *.exe
+*.dmg
+*.AppImage

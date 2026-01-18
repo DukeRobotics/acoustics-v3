@@ -2,16 +2,13 @@
 
 ___
 
-## One Time SETUP (ONLY SUPPORTING MAC + WINDOWS rn)
+## One Time SETUP (ONLY SUPPORTING WINDOWS rn)
 1. Clone Repo
-2. Open Saleae standalone
+2. Open Logic standalone through command line @`Logic_Software\Logic-1.2.40_WINDOWS\Logic.exe`
 3. Click Options drop down in top right corner
 4. Click Preferences
 5. Click Developer Tab
 6. Click Option to Enable Scripting Socket Server
-7. Download needed software (.AppImage or .dmg):
-  - https://support.saleae.com/product/logic-software/legacy-software/older-software-releases
-  - ./Logic-1.2.40-Linux.AppImage --appimage-extract
 8. Create a new python enviornment and pip install requirements.txt
 
 ___
@@ -69,3 +66,4 @@ ___
 - `CAPTURE_FORMAT`: Choose `.bin`, `.csv`, or `both`
 - `HISTORICAL_PATH`: Path to existing data file (when `CAPTURE=False`)
 - `PLOT_ENVELOPE` / `PLOT_GCC`: Enable/disable visualization
+

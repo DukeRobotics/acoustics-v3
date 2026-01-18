@@ -81,7 +81,7 @@ def run_controller(
     print("=" * 30)
 
 if __name__ == "__main__":
-    LOGIC_PATH = "Logic-1.2.40_WINDOWS/Logic.exe"   # LOGIC path. 
+    LOGIC_PATH = ""                                 # LOGIC path. Leave Blank for default
     SAMPLING_FREQ = 781250                          # Sampling frequency in Hz for data acquisition
     SELECTED = [True, True, True, True]             # Which hydrophones to analyze (array of 4 booleans)
     

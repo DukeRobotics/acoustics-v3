@@ -78,11 +78,11 @@ if __name__ == "__main__":
     SAMPLING_FREQ = 781250                          # Sampling frequency in Hz for data acquisition
     SELECTED = [True, True, True, True]             # Which hydrophones to analyze (array of 4 booleans)
     
-    EPOCHS = 10                                     # Number of data collection runs to perform
+    EPOCHS = 100                                     # Number of data collection runs to perform
     CAPTURE_TIME = 2                                # Duration of each capture in seconds
     CAPTURE_FORMAT = ".bin"                         # Format for capture: ".bin", ".csv", or "both"
-    CAPTURE_BASE_PATH = "Temp_Data"                 # Base directory path for saving captured data
-    TEST_NAME = "0"                                  # Name for this test session (timestamp will be appended)
+    CAPTURE_BASE_PATH = "Temp_Data"                 # Base directory path for saving captured data. r""" for absolute path not in directory.
+    TEST_NAME = ""                                  # Name for this test session (timestamp will be appended)
                                                     # Please name test 0, 1, 2, ... 7. to indicate truth.
     CAPTURE_CLOSE_LOGIC = True                      # Whether to close Logic software after all captures
 

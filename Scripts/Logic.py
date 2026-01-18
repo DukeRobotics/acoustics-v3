@@ -14,11 +14,11 @@ class Logic():
         if logic_path != "":
             self.LOGIC_PATH = logic_path
         elif sys.platform == "win32":
-            self.LOGIC_PATH = "Logic-1.2.40_WINDOWS/Logic.exe"
+            self.LOGIC_PATH = "Logic_Software/Logic-1.2.40_WINDOWS/Logic.exe"
         elif sys.platform == "darwin":
             self.LOGIC_PATH = "Logic-1.2.40-MacOS.dmg"
         elif sys.platform == "linux":
-            self.LOGIC_PATH = "Logic-1.2.40-Linux.AppImage"
+            self.LOGIC_PATH = "Logic_Software/Logic-1.2.40-Linux.AppImage"
         else:
             print(f"Unknown OS: {sys.platform}")
 

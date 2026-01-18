@@ -44,5 +44,28 @@ Read a given analog file
 ___
 
 ## TODO
-- Fix timing, currently time values are slightly off from true time
+- `Scripts\Hydrophone_Array.py` Break out frequency spectrum graph from envelope plot. Make it its own independant feature. and something envelope and gcc can call. You can send it either raw signal, the processed envelope signal, or processed gcc signal. Right now it only shows the processed envelope signal. 
+- `Scripts\Hydrophone_Array.py` FIX or Disable GCC. Too complicated right now with little understanding. Go back to basics. Check earlier version from acoustic v2 for reference. 
+- `Scripts\Hydrophone_Array.py` Look into the effects of envelope whitening. May be a better way to normalize data and minimize per_hydrophone variation
+- `Scripts\Hydrophone_Array.py` Large Fix. Re-organize script contents. Right now its very messy in terms of organization. A bit of AI-written code that makes following very difficult. It was made piecemail. No real final architecture in mind so just messy.  
+- Make `nn_train.py` script more friendly for feature selection (what cols and # of cols to select for features from csv)
+- Make `nn_train.py` easier to configure confidence thresholds 
+- `read_data/` Fix timing, currently time values are slightly off from true time. Ahaan used [Imhex|https://github.com/WerWolv/ImHex] to manually parse the file. He can tell you exactly bit-wise file format. 
 - Organize files within repo
+- Introduce back Linux image and mac image. Make mac image easier to use (so don't have to initiallize every time). Linux worked at one point. Clear robot cache or temp and repo instantiation and try again. Be careful closing Saleae software in the middle of it being controlled by python. Can cause errors. troubleshooting: clear cache/temp and pray. (This is what happened to the image on the robot. and why it can no longer can be opened by the code)
+
+___
+
+## Script Usage Guide
+
+### Controller.py
+**Purpose:** Single data capture and analysis workflow
+
+**Use Case:** Capture new data from Logic analyzer OR analyze historical data files
+
+**Key Parameters:**
+- `CAPTURE`: Set to `True` for new capture, `False` to use historical data
+- `CAPTURE_TIME`: Duration of capture in seconds
+- `CAPTURE_FORMAT`: Choose `.bin`, `.csv`, or `both`
+- `HISTORICAL_PATH`: Path to existing data file (when `CAPTURE=False`)
+- `PLOT_ENVELOPE` / `PLOT_GCC`: Enable/disable visualization

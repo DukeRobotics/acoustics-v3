@@ -15,9 +15,6 @@ class Hydrophone:
     envelope: Optional[np.ndarray] = None
     found_peak: bool = False
 
-    # bandpass filtered signal for GCC-PHAT
-    filtered_signal_range: Optional[np.ndarray] = None
-
     # GCC-PHAT results (relative to a reference hydrophone)
     gcc_tdoa: Optional[float] = None
     gcc_cc: Optional[np.ndarray] = None  # cross-correlation array for plotting
@@ -33,8 +30,6 @@ class Hydrophone:
         self.filtered_signal = None
         self.envelope = None
         self.found_peak = False
-
-        self.filtered_signal_range = None
 
         self.gcc_tdoa = None
         self.gcc_cc = None

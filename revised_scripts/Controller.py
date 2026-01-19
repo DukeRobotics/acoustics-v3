@@ -87,7 +87,7 @@ if __name__ == "__main__":
     HISTORICAL_PATH = "Temp_Data/2026-01-19--15-35-37/TEMP.bin"                            # Path to historical data file (used when CAPTURE is False)
     
     PLOT = True                                     # If True, plot
-    PLOT_OPTION = "filtered_frequency"                          # data to plot options right now: signal, filtered_signal, frequency, filtered_frequency
+    PLOT_OPTION = "signal"                          # data to plot options right now: signal, filtered_signal, frequency, filtered_frequency
 
     run_controller(
         sampling_freq=SAMPLING_FREQ,

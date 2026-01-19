@@ -21,7 +21,8 @@ class HydrophoneArray:
         search_band_min: float = 25000,
         search_band_max: float = 40000,
         sampling_freq: float = 781250,
-        selected: list[bool] = [True, True, True, True]
+        selected: list[bool] = [True, True, True, True],
+        apply_narrow_band_filter = True
     ):
         self.search_band_min = search_band_min
         self.search_band_max = search_band_max
@@ -32,16 +33,20 @@ class HydrophoneArray:
 
         self.hydrophones=[Hydrophone.Hydrophone(), Hydrophone.Hydrophone(), 
                           Hydrophone.Hydrophone(), Hydrophone.Hydrophone()]
+        self.apply_narrow_band_filter = apply_narrow_band_filter
+        self.narrow_band_width = 100
 
     def load_from_path(self, path: str)-> None:
         ext = os.path.splitext(path)[1].lower()
         if ext == ".bin":
-            return self.load_from_bin(path)
+            self.load_from_bin(path)
         elif ext == ".csv":
-            return self.load_from_csv(path)
+            self.load_from_csv(path)
         else:
             raise ValueError(f"Unsupported file type: {ext}. Expected .bin or .csv")
-    
+
+        self.apply_bandpass()
+
     def load_from_csv(self, path: str) -> None:
         self._reset_hydrophones()
 
@@ -85,14 +90,43 @@ class HydrophoneArray:
         hydrophone.signal = signal
         hydrophone.freqs = fftfreq(len(signal), self.sampling_period)
         hydrophone.frequency = fft(signal)
-        self.bandpass_signal(hydrophone)
 
     def _reset_hydrophones(self):
         for hydrophone in self.hydrophones:
             hydrophone.reset()
 
-    def bandpass_signal(self, hydrophone, order=16):
-        sos = butter(order, [self.search_band_min, self.search_band_max], 
+    def apply_bandpass(self):
+        if self.apply_narrow_band_filter:
+            peak_freqs = []
+            for hydrophone, is_selected in zip(self.hydrophones, self.selected):
+                if is_selected:
+                    freq_mask = (hydrophone.freqs >= self.search_band_min) & (hydrophone.freqs <= self.search_band_max)
+                    band_freqs = hydrophone.freqs[freq_mask]
+                    band_magnitude = np.abs(hydrophone.frequency[freq_mask])
+                    
+                    peak_idx = np.argmax(band_magnitude)
+                    peak_freq = band_freqs[peak_idx]
+                    peak_freqs.append(peak_freq)
+            
+            center_freq = np.mean(peak_freqs)
+        
+            for hydrophone, is_selected in zip(self.hydrophones, self.selected):
+                if is_selected:
+                    self._bandpass_signal(hydrophone, 
+                                    band_min=center_freq - self.narrow_band_width,
+                                    band_max=center_freq + self.narrow_band_width)
+        else:
+            for hydrophone, is_selected in zip(self.hydrophones, self.selected):
+                if is_selected:
+                    self._bandpass_signal(hydrophone)
+
+    def _bandpass_signal(self, hydrophone, band_min=None, band_max=None, order=16):
+        if band_min is None:
+            band_min = self.search_band_min
+        if band_max is None:
+            band_max = self.search_band_max
+        
+        sos = butter(order, [band_min, band_max], 
                      fs=self.sampling_freq, btype='band', output='sos')
         hydrophone.filtered_signal = sosfilt(sos, hydrophone.signal)
         hydrophone.filtered_frequency = fft(hydrophone.filtered_signal)

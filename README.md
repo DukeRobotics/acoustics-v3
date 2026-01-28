@@ -1,4 +1,4 @@
-# Acoustics V2
+# acoustics-v3
 
 ___
 
@@ -14,6 +14,12 @@ ___
 ___
 
 ## Running Files
+### Running Logic On Robots (From Windows)
+1. Using MobaXterm, SSH into the robot with display forwarding enabled (other software also works)
+2. Navigate to the `/acoustics-v3` directory
+    - For Logic V1, run `./Logic-1.2.40-Linux.AppImage`
+    - For Logic V2, run `./Logic-2.4.40-linux-x64.AppImage --no-sandbox`
+3. Interact with Logic as usual
 
 ___
 

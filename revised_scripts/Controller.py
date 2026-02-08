@@ -8,19 +8,14 @@ from analyzers import TOAEnvelopeAnalyzer
 
 def run_controller(
         hydrophone_array,
-        analyzer=None,
-        plot_data=False
+        analyzer=None
         ):
     """Run analysis on hydrophone array.
 
     Args:
         hydrophone_array: HydrophoneArray with loaded data
         analyzer: Optional analyzer instance to run
-        plot_data: Whether to plot basic signal/frequency
     """
-    # Plot raw data if requested
-    if plot_data:
-        hydrophone_array.plot_hydrophones()
 
     # Run analysis if provided
     if analyzer is not None:
@@ -83,7 +78,8 @@ def capture_data(
 def load_hydrophone_data(
         data_path,
         sampling_freq,
-        selected_hydrophones
+        selected_hydrophones,
+        plot_data
         ):
     """Load hydrophone data from file.
 
@@ -100,15 +96,19 @@ def load_hydrophone_data(
         selected=selected_hydrophones
     )
     array.load_from_path(data_path)
+    
+    # Plot raw data if requested
+    if plot_data:
+        array.plot_hydrophones()
     return array
 
 
 if __name__ == "__main__":
     # Whether to capture new data from Logic hardware (True) or use existing file (False)
-    CAPTURE_NEW_DATA = False
+    CAPTURE_NEW_DATA = True
 
     # Path to existing data file (used when CAPTURE_NEW_DATA = False)
-    DATA_FILE = "../Temp_Data/2026-02-08--01-40-27/TEMP.bin"
+    DATA_FILE = ""
 
     # Duration of capture in seconds (only used if CAPTURE_NEW_DATA = True)
     CAPTURE_TIME = 2
@@ -126,10 +126,9 @@ if __name__ == "__main__":
     SELECTED = [True, True, True, True]
 
     # Whether to plot raw signal and frequency spectrum
-    PLOT_DATA = False
+    PLOT_DATA = True
 
     # Analyzer instance for TOA detection (set to None to skip analysis)
-    # Set plot_results=True in analyzer to enable plotting
     ANALYZER = TOAEnvelopeAnalyzer(
         search_band_min=25000,
         search_band_max=40000,
@@ -158,13 +157,13 @@ if __name__ == "__main__":
     hydrophone_array_obj = load_hydrophone_data(
         data_path=DATA_PATH,
         sampling_freq=SAMPLING_FREQ,
-        selected_hydrophones=SELECTED
+        selected_hydrophones=SELECTED,
+        plot_data=PLOT_DATA
     )
 
     # Step 3: Run analysis
     analysis_results = run_controller(
         hydrophone_array=hydrophone_array_obj,
-        analyzer=ANALYZER,
-        plot_data=PLOT_DATA
+        analyzer=ANALYZER
     )
 

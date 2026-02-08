@@ -76,13 +76,19 @@ class BaseAnalyzer(ABC):
         # Compute relative times
         relative_times = self._compute_relative_times(results)
 
-        return {
+        analysis_results = {
             'results': results,
             'relative_times': relative_times,
             'reference_idx': self.reference_hydrophone,
             'center_frequency': center_freq,
             'analyzer': self.get_name()
         }
+
+        # Plot if flag is set
+        if self.plot_results_flag:
+            self.plot_results(hydrophone_array, analysis_results, selected)
+
+        return analysis_results
 
     def plot_results(self, hydrophone_array, analysis_results, selected=None):
         """Plot all analyzed hydrophones with filtered signal and frequency."""

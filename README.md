@@ -1,4 +1,4 @@
-# Acoustics V2
+# Acoustics V3
 
 ___
 
@@ -66,4 +66,5 @@ ___
 - `CAPTURE_FORMAT`: Choose `.bin`, `.csv`, or `both`
 - `HISTORICAL_PATH`: Path to existing data file (when `CAPTURE=False`)
 - `PLOT_ENVELOPE` / `PLOT_GCC`: Enable/disable visualization
+
 

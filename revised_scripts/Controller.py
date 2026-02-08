@@ -8,28 +8,36 @@ from analyzers import TOAEnvelopeAnalyzer
 
 def run_controller(
         hydrophone_array,
-        analyzer=None
+        analyzers=None
         ):
     """Run analysis on hydrophone array.
 
     Args:
         hydrophone_array: HydrophoneArray with loaded data
-        analyzer: Optional analyzer instance to run
-    """
+        analyzers: Optional analyzer instance or list of analyzer instances to run
 
-    # Run analysis if provided
-    if analyzer is not None:
-        analysis_results = analyzer.analyze_array(hydrophone_array)
+    Returns:
+        Single analysis result dict if one analyzer, or list of dicts if multiple
+    """
+    # Handle single analyzer or list
+    if analyzers is None:
+        return None
+    
+    results = []
+    for analyzer in analyzers:
+        print(f"\n{'='*60}")
+        analysis_result = analyzer.analyze_array(hydrophone_array)
 
         # Print results
-        print(f"\n{analysis_results['analyzer']}")
-        print(f"Center Frequency: {analysis_results['center_frequency']:.2f} Hz")
-        print(f"\nRelative TOA (ref: hydrophone {analysis_results['reference_idx']}):")
-        for i, rel_time in enumerate(analysis_results['relative_times']):
+        print(f"\n{analysis_result['analyzer']}")
+        print(f"Center Frequency: {analysis_result['center_frequency']:.2f} Hz")
+        print(f"\nRelative TOA (ref: hydrophone {analysis_result['reference_idx']}):")
+        for i, rel_time in enumerate(analysis_result['relative_times']):
             print(f"  Hydrophone {i}: {rel_time*1e6:8.2f} μs")
+        
+        results.append(analysis_result)
 
-        return analysis_results
-    return None
+    return results
 
 
 def capture_data(
@@ -128,17 +136,19 @@ if __name__ == "__main__":
     # Whether to plot raw signal and frequency spectrum
     PLOT_DATA = True
 
-    # Analyzer instance for TOA detection (set to None to skip analysis)
-    ANALYZER = TOAEnvelopeAnalyzer(
-        search_band_min=25000,
-        search_band_max=40000,
-        use_narrow_band=True,
-        narrow_band_width=100,
-        reference_hydrophone=0,
-        plot_results=True,
-        threshold_sigma=5
-    )
-
+    # Analyzer(s) for TOA detection (set to None to skip analysis)
+    # Can be a single analyzer or a list of analyzers to run in sequence
+    ANALYZERS = [
+        TOAEnvelopeAnalyzer(
+            search_band_min=25000,
+            search_band_max=40000,
+            use_narrow_band=True,
+            narrow_band_width=100,
+            reference_hydrophone=0,
+            plot_results=True,
+            threshold_sigma=5
+        ),
+    ]
 
     # Step 1: Get data (capture new or load existing)
     if CAPTURE_NEW_DATA:
@@ -164,6 +174,6 @@ if __name__ == "__main__":
     # Step 3: Run analysis
     analysis_results = run_controller(
         hydrophone_array=hydrophone_array_obj,
-        analyzer=ANALYZER
+        analyzers=ANALYZERS
     )
 

@@ -16,14 +16,9 @@ class HydrophoneArray:
     """Array of hydrophone sensors with signal processing capabilities."""
     def __init__(
         self,
-        search_band_min: float = 25000,
-        search_band_max: float = 40000,
         sampling_freq: float = 781250,
-        selected: list[bool] | None = None,
-        apply_narrow_band_filter: bool = True
+        selected: list[bool] | None = None
     ):
-        self.search_band_min = search_band_min
-        self.search_band_max = search_band_max
         self.sampling_freq = sampling_freq
         self.sampling_period = 1 / sampling_freq
 
@@ -35,8 +30,6 @@ class HydrophoneArray:
             hydrophone_module.Hydrophone(),
             hydrophone_module.Hydrophone()
         ]
-        self.apply_narrow_band_filter = apply_narrow_band_filter
-        self.narrow_band_width = 100
 
     def load_from_path(self, path: str) -> None:
         """Load hydrophone data from a file (bin or csv format)."""

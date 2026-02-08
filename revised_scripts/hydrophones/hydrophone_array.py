@@ -7,7 +7,6 @@ import struct
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.signal import butter, sosfilt
 from scipy.fft import fft, fftfreq
 
 from hydrophones import hydrophone as hydrophone_module
@@ -48,8 +47,6 @@ class HydrophoneArray:
             self._load_from_csv(path)
         else:
             raise ValueError(f"Unsupported file type: {ext}. Expected .bin or .csv")
-
-        self._apply_bandpass()
 
     def _load_from_csv(self, path: str) -> None:
         self._reset_hydrophones()
@@ -103,95 +100,38 @@ class HydrophoneArray:
         for hydro in self.hydrophones:
             hydro.reset()
 
-    def _apply_bandpass(self):
-        if self.apply_narrow_band_filter:
-            peak_freqs = []
-            for hydro, is_selected in zip(self.hydrophones, self.selected):
-                if is_selected:
-                    freq_mask = (
-                        (hydro.freqs >= self.search_band_min) &
-                        (hydro.freqs <= self.search_band_max)
-                    )
-                    band_freqs = hydro.freqs[freq_mask]
-                    band_magnitude = np.abs(hydro.frequency[freq_mask])
+    def plot_hydrophones(self):
+        """Plot basic hydrophone data: signal and frequency."""
+        num_plots = sum(self.selected)
 
-                    peak_idx = np.argmax(band_magnitude)
-                    peak_freq = band_freqs[peak_idx]
-                    peak_freqs.append(peak_freq)
-
-            center_freq = np.mean(peak_freqs)
-
-            for hydro, is_selected in zip(self.hydrophones, self.selected):
-                if is_selected:
-                    self._bandpass_signal(
-                        hydro,
-                        band_min=center_freq - self.narrow_band_width,
-                        band_max=center_freq + self.narrow_band_width
-                    )
-        else:
-            for hydro, is_selected in zip(self.hydrophones, self.selected):
-                if is_selected:
-                    self._bandpass_signal(hydro)
-
-    def _bandpass_signal(self, hydro, band_min=None, band_max=None, order=16):
-        if band_min is None:
-            band_min = self.search_band_min
-        if band_max is None:
-            band_max = self.search_band_max
-
-        sos = butter(
-            order,
-            [band_min, band_max],
-            fs=self.sampling_freq,
-            btype='band',
-            output='sos'
-        )
-        hydro.filtered_signal = sosfilt(sos, hydro.signal)
-        hydro.filtered_frequency = fft(hydro.filtered_signal)
-
-    def plot_hydrophones(self, option="signal"):
-        """Plot hydrophone data with specified visualization option."""
-        num_subplots = sum(self.selected)
-        _, axes = plt.subplots(num_subplots, 1, figsize=(10, 10), sharex=True)
-        if num_subplots == 1:
-            axes = [axes]
+        # Create 2 columns: time domain and frequency domain
+        _, axes = plt.subplots(num_plots, 2, figsize=(14, 3*num_plots), squeeze=False)
 
         plot_idx = 0
         for i, (hydro, is_selected) in enumerate(
             zip(self.hydrophones, self.selected)
         ):
             if is_selected:
-                if option == "signal":
-                    x_label = "Signal"
-                    y_label = "Time (s)"
-                    x_axis = hydro.times
-                    y_axis = hydro.signal
-                elif option == "filtered_signal":
-                    x_label = "Signal"
-                    y_label = "Time (s)"
-                    x_axis = hydro.times
-                    y_axis = hydro.filtered_signal
-                elif option == "frequency":
-                    x_label = "Frequency"
-                    y_label = "Frequency Content"
-                    x_axis = hydro.freqs
-                    y_axis = np.abs(hydro.frequency)
-                elif option == "filtered_frequency":
-                    x_label = "Filtered Frequency"
-                    y_label = "Frequency Content"
-                    x_axis = hydro.freqs
-                    y_axis = np.abs(hydro.filtered_frequency)
-                else:
-                    print("not a valid option")
-                    return
+                # Time domain - signal
+                axes[plot_idx, 0].plot(hydro.times, hydro.signal, color='blue')
+                axes[plot_idx, 0].set_ylabel('Amplitude')
+                axes[plot_idx, 0].set_title(f'Hydrophone {i+1} - Signal')
+                axes[plot_idx, 0].grid(True, alpha=0.3)
 
-                axes[plot_idx].plot(x_axis, y_axis, label="Original")
-                axes[plot_idx].set_xlabel(x_label)
-                axes[plot_idx].set_ylabel(y_label)
-                axes[plot_idx].legend(loc="best")
-                axes[plot_idx].grid(True)
-                axes[plot_idx].set_title(f"Hydrophone {i+1}")
+                # Frequency domain
+                freq_mask = hydro.freqs >= 0
+                freqs = hydro.freqs[freq_mask]
+                magnitude = np.abs(hydro.frequency[freq_mask])
+
+                axes[plot_idx, 1].plot(freqs, magnitude, color='blue')
+                axes[plot_idx, 1].set_ylabel('Magnitude')
+                axes[plot_idx, 1].set_title(f'Hydrophone {i+1} - Frequency')
+                axes[plot_idx, 1].grid(True, alpha=0.3)
+                axes[plot_idx, 1].set_xlim([0, 100000])
+
                 plot_idx += 1
 
+        axes[-1, 0].set_xlabel('Time (s)')
+        axes[-1, 1].set_xlabel('Frequency (Hz)')
         plt.tight_layout()
         plt.show()

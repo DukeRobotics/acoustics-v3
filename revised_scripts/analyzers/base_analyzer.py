@@ -15,7 +15,6 @@ class BaseAnalyzer(ABC):
         use_narrow_band: bool = True,
         narrow_band_width: float = 100,
         filter_order: int = 16,
-        reference_hydrophone: int = 0,
         plot_results: bool = False,
         config: dict | None = None
     ):
@@ -25,7 +24,6 @@ class BaseAnalyzer(ABC):
         self.narrow_band_width = narrow_band_width
         self.filter_order = filter_order
         self.plot_results_flag = plot_results
-        self.reference_hydrophone = reference_hydrophone
         self.config = config or {}
 
     # ==================== ABSTRACT METHODS ====================
@@ -73,13 +71,8 @@ class BaseAnalyzer(ABC):
                 result['hydrophone_idx'] = idx
                 results.append(result)
 
-        # Compute relative times
-        relative_times = self._compute_relative_times(results)
-
         analysis_results = {
             'results': results,
-            'relative_times': relative_times,
-            'reference_idx': self.reference_hydrophone,
             'center_frequency': center_freq,
             'analyzer': self.get_name()
         }
@@ -88,6 +81,12 @@ class BaseAnalyzer(ABC):
             self.plot_results(hydrophone_array, analysis_results, selected)
 
         return analysis_results
+
+    def print_results(self, analysis_results):
+        """Print analysis results. Can be overridden by subclasses."""
+        print(f"\n{analysis_results['analyzer']}")
+        print(f"Center Frequency: {analysis_results.get('center_frequency', 'N/A'):.2f} Hz" 
+              if analysis_results.get('center_frequency') else "Center Frequency: N/A")
 
     def plot_results(self, hydrophone_array, analysis_results, selected=None):
         """Plot all analyzed hydrophones with filtered signal and frequency."""
@@ -161,7 +160,7 @@ class BaseAnalyzer(ABC):
                 peak_freqs.append(band_freqs[peak_idx])
         return float(np.mean(peak_freqs))
 
-    def _compute_relative_times(self, results):
+    def _compute_relative_times(self, results, reference_hydrophone):
         """Compute TOA relative to reference hydrophone."""
-        ref_toa = results[self.reference_hydrophone]['toa_time']
+        ref_toa = results[reference_hydrophone]['toa_time']
         return [r['toa_time'] - ref_toa for r in results]

@@ -3,7 +3,7 @@ import os
 import time
 from logic import logic
 from hydrophones import hydrophone_array
-from analyzers import TOAEnvelopeAnalyzer
+from analyzers import TOAEnvelopeAnalyzer, NearbyAnalyzer
 
 
 def run_controller(
@@ -26,13 +26,7 @@ def run_controller(
     for analyzer in analyzers:
         print(f"\n{'='*60}")
         analysis_result = analyzer.analyze_array(hydrophone_array)
-
-        print(f"\n{analysis_result['analyzer']}")
-        print(f"Center Frequency: {analysis_result['center_frequency']:.2f} Hz")
-        print(f"\nRelative TOA (ref: hydrophone {analysis_result['reference_idx']}):")
-        for i, rel_time in enumerate(analysis_result['relative_times']):
-            print(f"  Hydrophone {i}: {rel_time*1e6:8.2f} μs")
-        
+        analyzer.print_results(analysis_result)
         results.append(analysis_result)
 
     return results
@@ -143,6 +137,14 @@ if __name__ == "__main__":
             reference_hydrophone=0,
             plot_results=True,
             threshold_sigma=5
+        ),
+        NearbyAnalyzer(
+            threshold=8.0,
+            search_band_min=25000,
+            search_band_max=40000,
+            use_narrow_band=True,
+            narrow_band_width=100,
+            plot_results=True
         ),
     ]
 

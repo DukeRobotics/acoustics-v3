@@ -36,12 +36,9 @@ def collect_batch_data(
 
     # Collect data for each epoch
     for epoch in range(epochs):
-        print(f"\nEpoch {epoch + 1}/{epochs}")
-
-        epoch_folder = os.path.join(test_path, f"epoch_{epoch}")
-        os.makedirs(epoch_folder, exist_ok=True)
-
-        logic_interface.export_binary_capture(capture_time, epoch_folder)
+        print(f"\nEpoch {epoch}/{epochs}")
+        capture_name = f"{test_name}_epoch_{epoch}" if test_name else f"epoch_{epoch}"
+        logic_interface.export_binary_capture(capture_time, test_path, capture_name)
 
     logic_interface.kill_logic()
 
@@ -57,7 +54,7 @@ if __name__ == "__main__":
     # ==================== CONFIGURATION ====================
 
     # Name for this test (0,1,2,3)
-    TEST_NAME = ""
+    TEST_NAME = "0"
 
     # Number of capture epochs to collect
     EPOCHS = 100

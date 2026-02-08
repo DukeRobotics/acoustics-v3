@@ -1,44 +1,27 @@
-"""TOA estimation using Hilbert envelope detection."""
+from .base_analyzer import BaseAnalyzer
 import numpy as np
-from scipy.signal import hilbert
 from scipy.fft import fft, fftfreq
 
-from .base_analyzer import BaseAnalyzer
-
-
-class TOAEnvelopeAnalyzer(BaseAnalyzer):
+class NearbyAnalyzer(BaseAnalyzer):
     """TOA estimation using Hilbert envelope detection."""
 
-    def __init__(self, threshold_sigma=5, reference_hydrophone=0, **kwargs):
+    def __init__(self, threshold, **kwargs):
         super().__init__(**kwargs)
-        self.threshold_sigma = threshold_sigma
-        self.reference_hydrophone = reference_hydrophone
+        self.threshold = threshold
 
     def get_name(self):
-        return "TOA Envelope Detection"
-    
-    def analyze_array(self, hydrophone_array, selected=None):
-        """Override to add relative_times calculation."""
-        analysis_results = super().analyze_array(hydrophone_array, selected)
-        
-        # Compute relative times for TOA analyzer
-        relative_times = self._compute_relative_times(
-            analysis_results['results'], self.reference_hydrophone
-        )
-        analysis_results['relative_times'] = relative_times
-        analysis_results['reference_idx'] = self.reference_hydrophone
-        
-        return analysis_results
+        return "Static Nearby Analyzer"
     
     def print_results(self, analysis_results):
-        """Print TOA-specific results."""
+        """Print nearby detection results."""
         super().print_results(analysis_results)
-        print(f"\nRelative TOA (ref: hydrophone {analysis_results['reference_idx']}):")
-        for i, rel_time in enumerate(analysis_results['relative_times']):
-            print(f"  Hydrophone {i}: {rel_time*1e6:8.2f} μs")
-
+        print(f"\nNearby Detection (threshold: {self.threshold}):")
+        for result in analysis_results['results']:
+            status = "NEARBY" if result['nearby'] else "NOT NEARBY"
+            print(f"  Hydrophone {result['hydrophone_idx']}: {status}")
+    
     def _analyze_single(self, hydrophone, sampling_freq, center_freq):
-        """Analyze one hydrophone using envelope detection."""
+        """Analyze one hydrophone using static threshold."""
         # Determine bandpass range
         if self.use_narrow_band and center_freq:
             band_min = center_freq - self.narrow_band_width
@@ -52,35 +35,23 @@ class TOAEnvelopeAnalyzer(BaseAnalyzer):
             hydrophone.signal, sampling_freq, band_min, band_max
         )
 
-        # Compute envelope using Hilbert transform
-        envelope = np.abs(hilbert(filtered_signal))
-
         # Detect TOA using threshold
-        threshold = (
-            np.mean(envelope) +
-            self.threshold_sigma * np.std(envelope)
-        )
-        toa_candidates = np.where(envelope > threshold)[0]
-        if len(toa_candidates) > 0:
-            toa_idx = toa_candidates[0]  # First crossing
-        else:
-            toa_idx = np.argmax(envelope)  # Fallback to peak
+        toa_candidates = np.where(filtered_signal > self.threshold)[0]
+        nearby = len(toa_candidates) > 0
 
         # Compute filtered frequency spectrum
         filtered_frequency = fft(filtered_signal)
         filtered_freqs = fftfreq(len(filtered_signal), 1/sampling_freq)
-
+        
         return {
-            'toa_time': hydrophone.times[toa_idx],
-            'toa_idx': toa_idx,
+            'nearby': nearby,
             'filtered_signal': filtered_signal,
-            'processed_signal': envelope,
             'filtered_frequency': filtered_frequency,
             'filtered_freqs': filtered_freqs,
-            'threshold': threshold,
+            'threshold': self.threshold,
             'band_min': band_min,
             'band_max': band_max
-        }
+        }        
 
     def _plot_single_signal(self, ax_time, ax_freq, hydrophone, result, idx):
         """Plot envelope over filtered signal with TOA marker."""
@@ -89,18 +60,19 @@ class TOAEnvelopeAnalyzer(BaseAnalyzer):
             hydrophone.times, result['filtered_signal'],
             alpha=0.5, label='Filtered Signal', color='blue'
         )
-        ax_time.plot(
-            hydrophone.times, result['processed_signal'],
-            label='Envelope', color='darkblue', linewidth=2
-        )
         ax_time.axhline(
             result['threshold'], color='green',
             linestyle=':', alpha=0.5, label='Threshold'
         )
-        ax_time.axvline(
-            result['toa_time'], color='red',
-            linestyle='--', linewidth=2,
-            label=f"TOA: {result['toa_time']:.6f}s"
+        
+        # Indicate if nearby
+        status = 'NEARBY' if result['nearby'] else 'NOT NEARBY'
+        color = 'green' if result['nearby'] else 'red'
+        ax_time.text(
+            0.5, 0.95, status,
+            transform=ax_time.transAxes,
+            fontsize=12, fontweight='bold',
+            color=color, ha='center', va='top'
         )
 
         # Frequency domain plot

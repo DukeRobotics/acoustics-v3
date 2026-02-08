@@ -19,7 +19,6 @@ def run_controller(
     Returns:
         Single analysis result dict if one analyzer, or list of dicts if multiple
     """
-    # Handle single analyzer or list
     if analyzers is None:
         return None
     
@@ -28,7 +27,6 @@ def run_controller(
         print(f"\n{'='*60}")
         analysis_result = analyzer.analyze_array(hydrophone_array)
 
-        # Print results
         print(f"\n{analysis_result['analyzer']}")
         print(f"Center Frequency: {analysis_result['center_frequency']:.2f} Hz")
         print(f"\nRelative TOA (ref: hydrophone {analysis_result['reference_idx']}):")
@@ -105,7 +103,6 @@ def load_hydrophone_data(
     )
     array.load_from_path(data_path)
     
-    # Plot raw data if requested
     if plot_data:
         array.plot_hydrophones()
     return array
@@ -137,7 +134,6 @@ if __name__ == "__main__":
     PLOT_DATA = True
 
     # Analyzer(s) for TOA detection (set to None to skip analysis)
-    # Can be a single analyzer or a list of analyzers to run in sequence
     ANALYZERS = [
         TOAEnvelopeAnalyzer(
             search_band_min=25000,

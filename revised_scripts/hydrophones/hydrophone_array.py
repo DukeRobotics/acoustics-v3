@@ -97,7 +97,6 @@ class HydrophoneArray:
         """Plot basic hydrophone data: signal and frequency."""
         num_plots = sum(self.selected)
 
-        # Create 2 columns: time domain and frequency domain
         _, axes = plt.subplots(num_plots, 2, figsize=(14, 3*num_plots), squeeze=False)
 
         plot_idx = 0

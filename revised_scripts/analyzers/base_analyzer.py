@@ -49,7 +49,7 @@ class BaseAnalyzer(ABC):
     def get_name(self) -> str:
         """Return analyzer name."""
 
-    # ==================== PUBLIC API ====================
+    # ==================== PUBLIC ====================
 
     def analyze_array(self, hydrophone_array, selected: list[bool] | None = None):
         """Analyze all selected hydrophones. Returns dict with results."""
@@ -84,7 +84,6 @@ class BaseAnalyzer(ABC):
             'analyzer': self.get_name()
         }
 
-        # Plot if flag is set
         if self.plot_results_flag:
             self.plot_results(hydrophone_array, analysis_results, selected)
 
@@ -129,7 +128,7 @@ class BaseAnalyzer(ABC):
         plt.tight_layout()
         plt.show()
 
-    # ==================== SHARED UTILITIES ====================
+    # ==================== COMMON ====================
 
     def apply_bandpass(self, signal, sampling_freq, band_min=None, band_max=None):
         """Apply bandpass filter to signal."""

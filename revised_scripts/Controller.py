@@ -130,16 +130,17 @@ if __name__ == "__main__":
     # Analyzer(s) for TOA detection (set to None to skip analysis)
     ANALYZERS = [
         TOAEnvelopeAnalyzer(
+            threshold_sigma=5,
             search_band_min=25000,
             search_band_max=40000,
             use_narrow_band=True,
             narrow_band_width=100,
             reference_hydrophone=0,
-            plot_results=True,
-            threshold_sigma=5
+            plot_results=False
         ),
         NearbyAnalyzer(
             threshold=1.0,
+            filter_order = 0,
             search_band_min=25000,
             search_band_max=40000,
             use_narrow_band=True,

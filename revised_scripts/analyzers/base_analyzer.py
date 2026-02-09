@@ -14,7 +14,7 @@ class BaseAnalyzer(ABC):
         search_band_max: float = 40000,
         use_narrow_band: bool = True,
         narrow_band_width: float = 100,
-        filter_order: int = 16,
+        filter_order: int = 8,
         plot_results: bool = False,
         config: dict | None = None
     ):
@@ -113,12 +113,12 @@ class BaseAnalyzer(ABC):
 
             # Common formatting
             axes[plot_idx, 0].set_ylabel('Amplitude')
-            axes[plot_idx, 0].set_title(f'Hydrophone {hydro_idx + 1} - Time Domain')
+            axes[plot_idx, 0].set_title(f'Hydrophone {hydro_idx} - Time Domain')
             axes[plot_idx, 0].legend(loc='best')
             axes[plot_idx, 0].grid(True, alpha=0.3)
 
             axes[plot_idx, 1].set_ylabel('Magnitude')
-            axes[plot_idx, 1].set_title(f'Hydrophone {hydro_idx + 1} - Frequency Domain')
+            axes[plot_idx, 1].set_title(f'Hydrophone {hydro_idx} - Frequency Domain')
             axes[plot_idx, 1].legend(loc='best')
             axes[plot_idx, 1].grid(True, alpha=0.3)
 
@@ -158,7 +158,7 @@ class BaseAnalyzer(ABC):
                 band_magnitude = np.abs(hydro.frequency[freq_mask])
                 peak_idx = np.argmax(band_magnitude)
                 peak_freqs.append(band_freqs[peak_idx])
-        return float(np.mean(peak_freqs))
+        return float(np.median(peak_freqs))
 
     def _compute_relative_times(self, results, reference_hydrophone):
         """Compute TOA relative to reference hydrophone."""

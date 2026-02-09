@@ -1,5 +1,4 @@
 *.csv
-*.bin
 *.log
 *.exe
 *.dmg
@@ -7,3 +6,4 @@
 __pycache__/
 *.pyc
 .DS_Store
+Temp_Data/

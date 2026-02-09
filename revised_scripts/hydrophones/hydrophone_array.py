@@ -72,22 +72,23 @@ class HydrophoneArray:
             num_samples, num_channels, sample_period = struct.unpack(
                 "<QId", header
             )
-
+            if sample_period:
+                self.sampling_period = sample_period
             # read all float32 samples
             total_floats = num_samples * num_channels
             float_bytes = f.read(total_floats * 4)
             data = np.frombuffer(float_bytes, dtype="<f4")
             data = data.reshape((num_channels, num_samples))
 
-        times = np.arange(num_samples, dtype=np.float64) * sample_period
+        times = np.arange(num_samples, dtype=np.float64) * self.sampling_period
         for idx, hydro in enumerate(self.hydrophones):
             self._update_hydrophone(hydro, times, data[idx])
 
     def _update_hydrophone(self, hydro, times, signal):
         hydro.times = times
-        hydro.signal = signal
-        hydro.freqs = fftfreq(len(signal), self.sampling_period)
-        hydro.frequency = fft(signal)
+        hydro.signal = signal - np.mean(signal)
+        hydro.freqs = fftfreq(len(hydro.signal), self.sampling_period)
+        hydro.frequency = fft(hydro.signal)
 
     def _reset_hydrophones(self):
         for hydro in self.hydrophones:
@@ -107,7 +108,7 @@ class HydrophoneArray:
                 # Time domain - signal
                 axes[plot_idx, 0].plot(hydro.times, hydro.signal, color='blue')
                 axes[plot_idx, 0].set_ylabel('Amplitude')
-                axes[plot_idx, 0].set_title(f'Hydrophone {i+1} - Signal')
+                axes[plot_idx, 0].set_title(f'Hydrophone {i} - Signal')
                 axes[plot_idx, 0].grid(True, alpha=0.3)
 
                 # Frequency domain
@@ -117,7 +118,7 @@ class HydrophoneArray:
 
                 axes[plot_idx, 1].plot(freqs, magnitude, color='blue')
                 axes[plot_idx, 1].set_ylabel('Magnitude')
-                axes[plot_idx, 1].set_title(f'Hydrophone {i+1} - Frequency')
+                axes[plot_idx, 1].set_title(f'Hydrophone {i} - Frequency')
                 axes[plot_idx, 1].grid(True, alpha=0.3)
                 axes[plot_idx, 1].set_xlim([0, 100000])
 

@@ -104,10 +104,10 @@ def load_hydrophone_data(
 
 if __name__ == "__main__":
     # Whether to capture new data from Logic hardware (True) or use existing file (False)
-    CAPTURE_NEW_DATA = True
+    CAPTURE_NEW_DATA = False
 
     # Path to existing data file (used when CAPTURE_NEW_DATA = False)
-    DATA_FILE = ""
+    DATA_FILE = "2_2026-02-07--15-38-56/2_epoch_001_2026-02-07--15-38-56.bin"
 
     # Duration of capture in seconds (only used if CAPTURE_NEW_DATA = True)
     CAPTURE_TIME = 2
@@ -139,7 +139,7 @@ if __name__ == "__main__":
             threshold_sigma=5
         ),
         NearbyAnalyzer(
-            threshold=8.0,
+            threshold=1.0,
             search_band_min=25000,
             search_band_max=40000,
             use_narrow_band=True,

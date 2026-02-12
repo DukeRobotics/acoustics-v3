@@ -1,8 +1,3 @@
-*.csv
-*.log
-*.exe
-*.dmg
-*.AppImage
 __pycache__/
 *.pyc
 .DS_Store

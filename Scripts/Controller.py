@@ -3,7 +3,7 @@ import time
 import Logic as LOGIC
 import Hydrophone_Array
 
-def run_controller(        
+def run_controller(
         sampling_freq,
         selected,
         capture,
@@ -19,16 +19,16 @@ def run_controller(
     # Parameter validation
     if sampling_freq <= 0:
         raise ValueError(f"sampling_freq must be positive, got {sampling_freq}")
-    
+
     if len(selected) != 4:
         raise ValueError(f"selected must have exactly 4 elements, got {len(selected)}")
-    
+
     if not any(selected):
         raise ValueError("At least one hydrophone must be selected (True in selected array)")
-    
+
     if capture_format not in [".bin", ".csv", "both"]:
         raise ValueError(f"capture_format must be '.bin', '.csv', or 'both', got '{capture_format}'")
-    
+
     if capture and capture_time <= 0:
         raise ValueError(f"capture_time must be positive when capturing, got {capture_time}")
 
@@ -36,7 +36,7 @@ def run_controller(
         # Ensure base directory exists
         if not os.path.exists(capture_base_path):
             os.makedirs(capture_base_path)
-        
+
         time_stamp = time.strftime('%Y-%m-%d--%H-%M-%S')
         folder = capture_prefix + time_stamp
 
@@ -47,12 +47,12 @@ def run_controller(
         logic.print_saleae_status()
 
         if capture_format == "both":
-            capture_path, csv_path = logic.export_binary_and_csv_capture(capture_time, base_path)
+            capture_path, csv_path = logic.export_capture(capture_time, base_path, True, True)
         elif capture_format == ".csv":
-            capture_path = logic.start_csv_capture(capture_time, base_path)
+            _, capture_path = logic.export_capture(capture_time, base_path, False, True)
         else:
-            capture_path = logic.export_binary_capture(capture_time, base_path)
-        
+            capture_path, _ = logic.export_capture(capture_time, base_path, True, False)
+
         if capture_close_logic:
             logic.kill_logic()
 
@@ -84,16 +84,16 @@ if __name__ == "__main__":
     LOGIC_PATH = ""                                 # LOGIC path. Leave Blank for default
     SAMPLING_FREQ = 781250                          # Sampling frequency in Hz for data acquisition
     SELECTED = [True, True, True, True]             # Which hydrophones to analyze (array of 4 booleans)
-    
+
     CAPTURE = True                                  # If True, capture new data; if False, use historical data
     CAPTURE_TIME = 2                                # Duration of capture in seconds
     CAPTURE_FORMAT = ".bin"                         # Format for capture: ".bin", ".csv", or "both"
     CAPTURE_BASE_PATH = "Temp_Data"                 # Base directory path for saving captured data
     CAPTURE_PREFIX = ""                             # Prefix for capture folder name (timestamp will be appended)
     CAPTURE_CLOSE_LOGIC = True                      # Whether to close Logic software after capture
-    
+
     HISTORICAL_PATH = ""                            # Path to historical data file (used when CAPTURE is False)
-    
+
     PLOT_ENVELOPE = False                           # Whether to plot envelope analysis results
     PLOT_GCC = False                                # Whether to plot GCC (Generalized Cross-Correlation) results
 

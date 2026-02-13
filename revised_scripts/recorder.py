@@ -38,7 +38,7 @@ def collect_batch_data(
     for epoch in range(epochs):
         print(f"\nEpoch {epoch}/{epochs}")
         capture_name = f"{test_name}_epoch_{epoch}" if test_name else f"epoch_{epoch}"
-        logic_interface.export_binary_capture(capture_time, test_path, capture_name)
+        logic_interface.capture_with_name(capture_time, test_path, capture_name)
 
     logic_interface.kill_logic()
 

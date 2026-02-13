@@ -21,7 +21,7 @@ def run_controller(
     """
     if analyzers is None:
         return None
-    
+
     results = []
     for analyzer in analyzers:
         print(f"\n{'='*60}")
@@ -57,16 +57,16 @@ def capture_data(
     logic_interface.print_saleae_status()
 
     if capture_format == "both":
-        capture_path, _ = logic_interface.export_binary_and_csv_capture(
-            capture_time, output_dir
+        capture_path, _ = logic_interface.export_capture(
+            capture_time, output_dir, True, True
         )
     elif capture_format == ".csv":
-        capture_path = logic_interface.start_csv_capture(
-            capture_time, output_dir
+        _, capture_path = logic_interface.export_capture(
+            capture_time, output_dir, False, True
         )
     else:
-        capture_path = logic_interface.export_binary_capture(
-            capture_time, output_dir
+        capture_path, _ = logic_interface.export_capture(
+            capture_time, output_dir, True, False
         )
 
     if close_logic_after:
@@ -96,7 +96,7 @@ def load_hydrophone_data(
         selected=selected_hydrophones
     )
     array.load_from_path(data_path)
-    
+
     if plot_data:
         array.plot_hydrophones()
     return array
@@ -175,4 +175,3 @@ if __name__ == "__main__":
         hydrophone_array=hydrophone_array_obj,
         analyzers=ANALYZERS
     )
-

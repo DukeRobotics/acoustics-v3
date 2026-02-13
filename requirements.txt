@@ -1,4 +1,4 @@
-saleae
+logic2-automation
 numpy
 scipy
 pandas

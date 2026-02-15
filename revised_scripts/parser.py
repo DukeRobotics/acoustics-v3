@@ -35,7 +35,7 @@ if __name__ == "__main__":
     
     # Setup output CSV
     timestamp = time.strftime('%Y-%m-%d--%H-%M-%S')
-    OUTPUT_PATH = os.path.join("Analysis", f"analysis_{timestamp}.csv")
+    OUTPUT_PATH = os.path.join("analysis", f"analysis_{timestamp}.csv")
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     
     HEADERS = ["PATH", "TRUTH", "PREDICTED",

@@ -19,12 +19,9 @@ if __name__ == "__main__":
     ANALYZERS = [
         TOAEnvelopeAnalyzer(
             threshold_sigma=5,
+            filter_order=16,
             search_band_min=25000,
             search_band_max=40000,
-            use_narrow_band=True,
-            narrow_band_width=100,
-            reference_hydrophone=0,
-            filter_order=0,
             plot_results=False
         ),
         NearbyAnalyzer(
@@ -32,8 +29,6 @@ if __name__ == "__main__":
             filter_order=0,
             search_band_min=25000,
             search_band_max=40000,
-            use_narrow_band=True,
-            narrow_band_width=100,
             plot_results=False
         ),
     ]

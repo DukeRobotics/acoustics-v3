@@ -7,49 +7,52 @@ from .base_analyzer import BaseAnalyzer
 
 
 class TOAEnvelopeAnalyzer(BaseAnalyzer):
-    """TOA estimation using Hilbert envelope detection."""
+    """Time of Arrival (TOA) estimation using Hilbert envelope detection.
+    
+    This analyzer detects signal arrival times by computing the Hilbert envelope
+    and finding the first point where it exceeds a threshold based on signal statistics.
+    """
 
-    def __init__(self, threshold_sigma=5, reference_hydrophone=0, **kwargs):
+    def __init__(self, threshold_sigma=5, **kwargs):
+        """Initialize TOA envelope analyzer.
+        
+        Args:
+            threshold_sigma: Number of standard deviations above mean for TOA threshold
+            **kwargs: Additional arguments passed to BaseAnalyzer
+        """
         super().__init__(**kwargs)
         self.threshold_sigma = threshold_sigma
-        self.reference_hydrophone = reference_hydrophone
 
     def get_name(self):
+        """Return analyzer name.
+        
+        Returns:
+            String identifier for this analyzer
+        """
         return "TOA Envelope Detection"
-    
-    def analyze_array(self, hydrophone_array, selected=None):
-        """Override to add relative_times calculation."""
-        analysis_results = super().analyze_array(hydrophone_array, selected)
-        
-        # Compute relative times for TOA analyzer
-        relative_times = self._compute_relative_times(
-            analysis_results['results'], self.reference_hydrophone
-        )
-        analysis_results['relative_times'] = relative_times
-        analysis_results['reference_idx'] = self.reference_hydrophone
-        
-        return analysis_results
-    
-    def print_results(self, analysis_results):
-        """Print TOA-specific results."""
-        super().print_results(analysis_results)
-        print(f"\nRelative TOA (ref: hydrophone {analysis_results['reference_idx']}):")
-        for i, rel_time in enumerate(analysis_results['relative_times']):
-            print(f"  Hydrophone {i}: {rel_time*1e6:8.2f} μs")
 
-    def _analyze_single(self, hydrophone, sampling_freq, center_freq):
-        """Analyze one hydrophone using envelope detection."""
-        # Determine bandpass range
-        if self.use_narrow_band and center_freq:
-            band_min = center_freq - self.narrow_band_width
-            band_max = center_freq + self.narrow_band_width
-        else:
-            band_min = self.search_band_min
-            band_max = self.search_band_max
-
+    def _analyze_single(self, hydrophone, sampling_freq):
+        """Analyze single hydrophone using envelope detection.
+        
+        Args:
+            hydrophone: Hydrophone object with signal data
+            sampling_freq: Sampling frequency in Hz
+            
+        Returns:
+            Dictionary containing:
+                - toa_time: Detected time of arrival (seconds)
+                - toa_idx: Sample index of TOA
+                - filtered_signal: Bandpass filtered signal
+                - processed_signal: Hilbert envelope of filtered signal
+                - filtered_frequency: FFT of filtered signal
+                - filtered_freqs: Frequency bins for FFT
+                - threshold: Detection threshold value
+                - band_min: Lower frequency bound used (Hz)
+                - band_max: Upper frequency bound used (Hz)
+        """
         # Apply bandpass filter
         filtered_signal = self.apply_bandpass(
-            hydrophone.signal, sampling_freq, band_min, band_max
+            hydrophone.signal, sampling_freq
         )
 
         # Compute envelope using Hilbert transform
@@ -78,12 +81,20 @@ class TOAEnvelopeAnalyzer(BaseAnalyzer):
             'filtered_frequency': filtered_frequency,
             'filtered_freqs': filtered_freqs,
             'threshold': threshold,
-            'band_min': band_min,
-            'band_max': band_max
+            'band_min': self.search_band_min,
+            'band_max': self.search_band_max
         }
 
     def _plot_single_signal(self, ax_time, ax_freq, hydrophone, result, idx):
-        """Plot envelope over filtered signal with TOA marker."""
+        """Plot envelope analysis results for a single hydrophone.
+        
+        Args:
+            ax_time: Matplotlib axis for time domain plot
+            ax_freq: Matplotlib axis for frequency domain plot
+            hydrophone: Hydrophone object with signal data
+            result: Analysis result dictionary from _analyze_single
+            idx: Hydrophone index
+        """
         # Time domain plot
         ax_time.plot(
             hydrophone.times, result['filtered_signal'],

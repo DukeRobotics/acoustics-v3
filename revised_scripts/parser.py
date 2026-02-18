@@ -52,7 +52,8 @@ if __name__ == "__main__":
     
     # Process all data files
     for data_dir in DATA_PATHS:
-        truth = int(data_dir.split("_")[0])
+        dir_name = os.path.basename(data_dir)
+        truth = int(dir_name.split("_")[0])
         
         for filename in os.listdir(data_dir):
             if not filename.endswith('.bin'):

@@ -4,7 +4,7 @@ import os
 import sys
 
 class Logic():
-    def __init__(self, sampling_freq = 781250, logic_path = ""):
+    def __init__(self, sampling_freq = 781250, logic_path = "", logic_version = 1):
         self.LAUNCH_TIMEOUT = 15
         self.QUIET = False
         self.PORT = 10429
@@ -18,7 +18,10 @@ class Logic():
         elif sys.platform == "darwin":
             self.LOGIC_PATH = "Logic-1.2.40-MacOS.dmg"
         elif sys.platform == "linux":
-            self.LOGIC_PATH = "Logic_Software/Logic-1.2.40-Linux.AppImage"
+            if logic_version == 1:
+                self.LOGIC_PATH = "Logic_Software/Logic-1.2.40-Linux.AppImage"
+            else:
+                self.LOGIC_PATH = '/Logic_Software/Logic-2.4.41-linux-x64.AppImage'
         else:
             print(f"Unknown OS: {sys.platform}")
 
@@ -37,11 +40,10 @@ class Logic():
 
         self.s = self.start_logic()
 
+        self.DEVICE_ID = None
         for device in self.s.get_devices():
             if device.device_type == self.DEVICE_SELECTION:
                 self.DEVICE_ID = device.device_id
-
-        assert self.DEVICE_ID is not None
 
     def start_logic(self):
         try:
@@ -83,5 +85,6 @@ class Logic():
         return os.path.join(output_dir, "analog.bin"), os.path.join(output_dir, "analog.csv")
 
     def capture_with_name(self, seconds, output_dir, name):
-        bin, _ = self.export_capture(seconds, output_dir, True, False)
-        os.rename(bin, os.path.join(output_dir, name))
+        _, _ = self.export_capture(seconds, output_dir, True, False)
+        for channel in self.CHANNELS:
+            os.rename(os.path.join(output_dir, f"analog_{channel}.bin"), os.path.join(output_dir, f"{name}_{channel}.bin"))

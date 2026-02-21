@@ -103,8 +103,11 @@ def load_hydrophone_data(
 
 
 if __name__ == "__main__":
+    # Logic Version
+    LOGIC_VERSION = 1
+
     # Whether to capture new data from Logic hardware (True) or use existing file (False)
-    CAPTURE_NEW_DATA = False
+    CAPTURE_NEW_DATA = True
 
     # Path to existing data file (used when CAPTURE_NEW_DATA = False)
     DATA_FILE = "2_2026-02-07--15-38-56/2_epoch_001_2026-02-07--15-38-56.bin"

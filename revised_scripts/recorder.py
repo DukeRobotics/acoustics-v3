@@ -9,7 +9,8 @@ def collect_batch_data(
         epochs,
         capture_time,
         output_base_path,
-        test_name
+        test_name,
+        logic_version
         ):
     """Collect multiple epochs of hydrophone data.
 
@@ -31,7 +32,7 @@ def collect_batch_data(
     os.makedirs(test_path, exist_ok=True)
 
     # Initialize Logic interface
-    logic_interface = logic.Logic(sampling_freq=sampling_freq)
+    logic_interface = logic.Logic(sampling_freq=sampling_freq, logic_version=logic_version)
     logic_interface.print_saleae_status()
 
     # Collect data for each epoch
@@ -52,6 +53,9 @@ def collect_batch_data(
 
 if __name__ == "__main__":
     # ==================== CONFIGURATION ====================
+
+    # Logic Version
+    LOGIC_VERSION = 1
 
     # Name for this test (0,1,2,3)
     TEST_NAME = "0"
@@ -75,5 +79,6 @@ if __name__ == "__main__":
         epochs=EPOCHS,
         capture_time=CAPTURE_TIME,
         output_base_path=OUTPUT_PATH,
-        test_name=TEST_NAME
+        test_name=TEST_NAME,
+        logic_version=LOGIC_VERSION
     )

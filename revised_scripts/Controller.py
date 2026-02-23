@@ -107,7 +107,7 @@ if __name__ == "__main__":
     CAPTURE_NEW_DATA = False
 
     # Path to existing data file (used when CAPTURE_NEW_DATA = False)
-    DATA_FILE = "2_2026-02-07--15-38-56/2_epoch_001_2026-02-07--15-38-56.bin"
+    DATA_FILE = ""
 
     # Duration of capture in seconds (only used if CAPTURE_NEW_DATA = True)
     CAPTURE_TIME = 2

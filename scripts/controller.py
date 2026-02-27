@@ -102,7 +102,46 @@ def load_hydrophone_data(
     return array
 
 
-if __name__ == "__main__":
+def find_closest_hydrophone(analysis_results):
+    """Find the closest hydrophone based on TOA analysis and nearby status.
+    
+    Args:
+        analysis_results: List of analysis results from run_controller
+        
+    Returns:
+        tuple: (closest_hydrophone_index, is_nearby) where index is 0-3 or None,
+               and is_nearby is True if average nearby status indicates proximity
+    """
+    if not analysis_results or len(analysis_results) == 0:
+        return (None, False)
+    
+    # Get TOA results (assumes first analyzer is TOA-based)
+    toa_results = analysis_results[0]['results']
+    
+    # Find hydrophone with earliest TOA time
+    earliest_time = float('inf')
+    closest_hydrophone = None
+    
+    for result in toa_results:
+        idx = result['hydrophone_idx']
+        toa_time = result.get('toa_time')
+        
+        if toa_time is not None and toa_time < earliest_time:
+            earliest_time = toa_time
+            closest_hydrophone = idx
+    
+    # Get nearby status (assumes second analyzer is nearby analyzer)
+    is_nearby = False
+    if len(analysis_results) > 1:
+        nearby_results = analysis_results[1]['results']
+        nearby_count = sum(1 for r in nearby_results if r.get('nearby', False))
+        # Consider "nearby" if majority of hydrophones detect it nearby
+        is_nearby = nearby_count >= len(nearby_results) / 2
+    
+    return (closest_hydrophone, is_nearby)
+
+
+def main():
     # Whether to capture new data from Logic hardware (True) or use existing file (False)
     CAPTURE_NEW_DATA = False
 
@@ -171,4 +210,16 @@ if __name__ == "__main__":
         hydrophone_array=hydrophone_array_obj,
         analyzers=ANALYZERS
     )
+    
+    # Step 4: Find closest hydrophone and nearby status
+    closest, is_nearby = find_closest_hydrophone(analysis_results)
+    
+    print(f"\n{'='*60}")
+    print(f"CLOSEST HYDROPHONE: {closest}")
+    print(f"IS NEARBY: {is_nearby}")
+    print(f"{'='*60}")
+    
+    return (closest, is_nearby)
 
+if __name__ == "__main__":
+    main()

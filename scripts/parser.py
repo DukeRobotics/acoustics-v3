@@ -8,11 +8,12 @@ from analyzers import TOAEnvelopeAnalyzer, NearbyAnalyzer
 if __name__ == "__main__":
     # Configuration
     SAMPLING_FREQ = 781250
-    SELECTED = [True, False, True, False]
+    SELECTED = [True, True, True, True]
     PLOT_DATA = False
     
     DATA_PATHS = [
-        "data/2.8.2026/0_2026-02-07--15-24-04/"
+        "data/2.8.2026/0_2026-02-07--15-24-04/",
+        "data/2.8.2026/2_2026-02-07--15-38-56"
     ]
     
     ANALYZERS = [
@@ -21,7 +22,7 @@ if __name__ == "__main__":
             filter_order=16,
             search_band_min=25000,
             search_band_max=40000,
-            plot_results=True
+            plot_results=False
         ),
         NearbyAnalyzer(
             threshold=1.0,
@@ -52,7 +53,10 @@ if __name__ == "__main__":
     # Process all data files
     for data_dir in DATA_PATHS:
         dir_name = os.path.basename(os.path.normpath(data_dir))
-        truth = int(dir_name.split("_")[0])
+        try:
+            truth = int(dir_name.split("_")[0])
+        except (ValueError, IndexError):
+            truth = None
         
         for filename in os.listdir(data_dir):
             if not filename.endswith('.bin'):
@@ -96,12 +100,13 @@ if __name__ == "__main__":
                 nearby_status = [nearby_dict.get(i) for i in range(4)]
                 
                 # Write to CSV
-                row = [filepath, truth, predicted] + toas + nearby_status
+                row = [filename, truth, predicted] + toas + nearby_status
                 with open(OUTPUT_PATH, mode="a", newline="", encoding="utf-8") as f:
                     csv.writer(f).writerow(row)
                 
                 # Update confusion matrix
-                confusion[truth][predicted] += 1
+                if truth is not None and predicted is not None:
+                    confusion[truth][predicted] += 1
                 
                 print(f"Processed: {filename} | Predicted: H{predicted} | Truth: H{truth}")
                 

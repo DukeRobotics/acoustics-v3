@@ -1,0 +1,14 @@
+PATH,TRUTH,PREDICTED,H0 TOA,H1 TOA,H2 TOA,H3 TOA,H0 NEARBY,H1 NEARBY,H2 NEARBY,H3 NEARBY
+0_logic1_hydrophone_0_closest_epoch_001_2026-02-15--15-52-54.bin,0,3,0.5505011200000001,0.55045248,0.55045248,0.55050368,True,True,True,True
+0_logic1_hydrophone_0_closest_epoch_002_2026-02-15--15-52-58.bin,0,3,0.41276928,0.41275136,0.41275776000000003,0.41277824,True,True,True,True
+0_logic1_hydrophone_0_closest_epoch_003_2026-02-15--15-53-03.bin,0,3,1.5708672000000001,1.57083648,1.5708544,1.5709440000000001,True,True,True,True
+0_logic1_hydrophone_0_closest_epoch_004_2026-02-15--15-53-10.bin,0,3,1.48313344,1.48309376,1.48309504,1.48313472,True,True,True,True
+0_logic1_hydrophone_0_closest_epoch_005_2026-02-15--15-53-16.bin,0,3,0.89622656,0.89618432,0.8962112,0.89623808,True,True,True,True
+0_logic1_hydrophone_0_closest_epoch_006_2026-02-15--15-53-23.bin,0,3,0.056436480000000004,0.0563904,0.05641984,0.05643904,True,False,True,False
+0_logic1_hydrophone_0_closest_epoch_007_2026-02-15--15-53-29.bin,0,3,0.46805248,0.46807424000000003,0.46806272,0.46827264,True,True,True,True
+0_logic1_hydrophone_0_closest_epoch_008_2026-02-15--15-53-35.bin,0,3,0.88050816,0.88047232,0.8804736,0.8805632,True,True,True,True
+0_logic1_hydrophone_0_closest_epoch_009_2026-02-15--15-53-41.bin,0,3,1.0422976,1.0422284800000001,1.04226048,1.04231552,True,True,True,True
+0_logic1_hydrophone_0_closest_epoch_010_2026-02-15--15-53-46.bin,0,3,0.15490944,0.15488,0.154912,0.1549888,True,True,True,True
+2_logic1_hydrophone_2_closest_epoch_001_2026-02-15--15-55-42.bin,2,2,0.23344384,0.23338624,0.23350912000000001,0.23336832000000002,False,False,True,False
+2_logic1_hydrophone_2_closest_epoch_002_2026-02-15--15-55-48.bin,2,0,0.39545344,0.39523968,0.39517696,0.39521024,False,False,True,False
+2_logic1_hydrophone_2_closest_epoch_003_2026-02-15--15-55-54.bin,2,2,0.5554496,0.55523712,0.5555392,0.55523584,False,False,True,False

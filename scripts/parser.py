@@ -8,12 +8,12 @@ from analyzers import TOAEnvelopeAnalyzer, NearbyAnalyzer
 if __name__ == "__main__":
     # Configuration
     SAMPLING_FREQ = 781250
-    SELECTED = [True, True, True, True]
+    SELECTED = [True, False, True, False]
     PLOT_DATA = False
     
     DATA_PATHS = [
-        "data/2.8.2026/0_2026-02-07--15-24-04/",
-        "data/2.8.2026/2_2026-02-07--15-38-56"
+        "data/2.15.2026/0_logic1_hydrophone_0_closest_2026-02-15--15-52-54",
+        "data/2.15.2026/2_logic1_hydrophone_2_closest_2026-02-15--15-55-42"
     ]
     
     ANALYZERS = [
@@ -81,15 +81,15 @@ if __name__ == "__main__":
                 
                 # Find closest hydrophone by earliest TOA time
                 toa_results = results[0]['results']
-                earliest_time = float('inf')
+                latest_time = 0
                 predicted = None
                 
                 for result in toa_results:
                     idx = result['hydrophone_idx']
                     toa_time = result.get('toa_time')
                     
-                    if toa_time is not None and toa_time < earliest_time:
-                        earliest_time = toa_time
+                    if toa_time is not None and toa_time > latest_time:
+                        latest_time = toa_time
                         predicted = idx
                 
                 # Extract TOA times and nearby status for CSV

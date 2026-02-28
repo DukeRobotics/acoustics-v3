@@ -56,23 +56,14 @@ def capture_data(
     logic_interface = logic.Logic(sampling_freq=sampling_freq)
     logic_interface.print_saleae_status()
 
-    if capture_format == "both":
-        capture_path, _ = logic_interface.export_capture(
-            capture_time, output_dir, True, True
-        )
-    elif capture_format == ".csv":
-        _, capture_path = logic_interface.export_capture(
-            capture_time, output_dir, False, True
-        )
-    else:
-        capture_path, _ = logic_interface.export_capture(
-            capture_time, output_dir, True, False
-        )
+    logic_interface.capture_with_name(
+        capture_time, output_dir, "analog"
+    )
 
     if close_logic_after:
         logic_interface.kill_logic()
 
-    return capture_path
+    return output_dir
 
 
 def load_hydrophone_data(
@@ -110,16 +101,16 @@ if __name__ == "__main__":
     CAPTURE_NEW_DATA = True
 
     # Path to existing data file (used when CAPTURE_NEW_DATA = False)
-    DATA_FILE = "2_2026-02-07--15-38-56/2_epoch_001_2026-02-07--15-38-56.bin"
+    DATA_DIR = ""
 
     # Duration of capture in seconds (only used if CAPTURE_NEW_DATA = True)
     CAPTURE_TIME = 2
 
     # Format for capture: '.bin', '.csv', or 'both' (only used if CAPTURE_NEW_DATA = True)
-    CAPTURE_FORMAT = ".bin"
+    CAPTURE_FORMAT = ".bin" # For Logic2, only use .bin
 
     # Output directory for captured data (only used if CAPTURE_NEW_DATA = True)
-    CAPTURE_OUTPUT = "Temp_Data"
+    CAPTURE_OUTPUT = "/home/robot/acoustics-v3/Temp_Data"
 
     # Sampling frequency in Hz for data acquisition
     SAMPLING_FREQ = 781250
@@ -163,7 +154,7 @@ if __name__ == "__main__":
             output_dir=output_dir
         )
     else:
-        DATA_PATH = DATA_FILE
+        DATA_PATH = DATA_DIR
 
     # Step 2: Load data into hydrophone array
     hydrophone_array_obj = load_hydrophone_data(

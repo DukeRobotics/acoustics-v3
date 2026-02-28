@@ -66,23 +66,17 @@ class HydrophoneArray:
     def _load_from_bin(self, path: str) -> None:
         self._reset_hydrophones()
 
-        with open(path, "rb") as f:
-            # Read header: 8 bytes uint64, 4 bytes uint32, 8 bytes double
-            header = f.read(8 + 4 + 8)
-            num_samples, num_channels, sample_period = struct.unpack(
-                "<QId", header
-            )
-            if sample_period:
-                self.sampling_period = sample_period
-            # read all float32 samples
-            total_floats = num_samples * num_channels
-            float_bytes = f.read(total_floats * 4)
-            data = np.frombuffer(float_bytes, dtype="<f4")
-            data = data.reshape((num_channels, num_samples))
+        with os.scandir(path) as entries:
+            for entry in entries:
+                if entry.is_file() and entry.name.endswith("bin"):
+                    data = np.fromfile(entry.path, dtype="<f4")
+                    num_samples = len(data)
 
-        times = np.arange(num_samples, dtype=np.float64) * self.sampling_period
-        for idx, hydro in enumerate(self.hydrophones):
-            self._update_hydrophone(hydro, times, data[idx])
+                    times = np.arange(num_samples, dtype=np.float64) * self.sampling_period
+
+                    index = int(entry.name.split('.')[-1])
+
+                    self._update_hydrophone(self.hydrophones[index], times, data)
 
     def _update_hydrophone(self, hydro, times, signal):
         hydro.times = times

@@ -55,10 +55,10 @@ if __name__ == "__main__":
     # ==================== CONFIGURATION ====================
 
     # Logic Version
-    LOGIC_VERSION = 1
+    LOGIC_VERSION = 2
 
     # Name for this test (0,1,2,3)
-    TEST_NAME = "0"
+    TEST_NAME = "H0_Closest_40FT"
 
     # Number of capture epochs to collect
     EPOCHS = 100
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     CAPTURE_TIME = 2
 
     # Base directory for saving captured data
-    OUTPUT_PATH = "Temp_Data"
+    OUTPUT_PATH = "/home/robot/acoustics-v3/Temp_Data"
 
     # ==================== EXECUTION ====================
 

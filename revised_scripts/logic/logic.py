@@ -7,7 +7,7 @@ class Logic():
     def __init__(self, sampling_freq = 781250, logic_path = "", logic_version = 1):
         self.LAUNCH_TIMEOUT = 15
         self.QUIET = False
-        self.PORT = 10429
+        self.PORT = 10430
         self.HOST = 'localhost'
 
         # TODO: Put in images for Logic 2

@@ -13,7 +13,9 @@ ___
 
 ___
 
-## Running Files
+## Opening Logic 1
+
+Running `/scripts/open_logic.py` will open Logic 1 in terminal without the user setting up an X11 server manually. The script will then stall in the terminal and Logic will automatically terminate when the script is terminated.
 
 ___
 

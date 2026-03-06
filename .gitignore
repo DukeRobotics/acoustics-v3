@@ -8,13 +8,13 @@ __pycache__/
 # Virtual environments
 venv/
 .venv/
+.logic2/
 
 # IDE / Editor settings
 .vscode/
 
 # Logic software files
 Logic_Software/squashfs-root
-.logic2/
 Logic-*
 
 # Project data directories

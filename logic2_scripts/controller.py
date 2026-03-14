@@ -95,10 +95,10 @@ def load_hydrophone_data(
 
 if __name__ == "__main__":
     # Whether to capture new data from Logic hardware (True) or use existing file (False)
-    CAPTURE_NEW_DATA = True
+    CAPTURE_NEW_DATA = False
 
     # Path to existing data file (used when CAPTURE_NEW_DATA = False)
-    DATA_DIR = ""
+    DATA_DIR = "Data/logic2_test_2_2026-02-15--15-02-04"
 
     # Duration of capture in seconds (only used if CAPTURE_NEW_DATA = True)
     CAPTURE_TIME = 2

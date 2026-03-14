@@ -46,7 +46,7 @@ class HydrophoneArray:
 
                     times = np.arange(num_samples, dtype=np.float64) * self.sampling_period
 
-                    index = int(entry.name.split('.')[-1])
+                    index = int(entry.name.split('.')[0].split("_")[-1])
 
                     self._update_hydrophone(self.hydrophones[index], times, data)
 

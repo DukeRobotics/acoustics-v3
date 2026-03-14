@@ -4,7 +4,7 @@ ___
 
 ## One Time SETUP (ONLY SUPPORTING WINDOWS rn)
 1. Clone Repo
-2. Open Logic standalone through command line @`Logic_Software\Logic-1.2.40_WINDOWS\Logic.exe`
+2. Open Logic standalone through command line @`logic_software\Logic-1.2.40_WINDOWS\Logic.exe`
 3. Click Options drop down in top right corner
 4. Click Preferences
 5. Click Developer Tab

@@ -75,7 +75,7 @@ def load_hydrophone_data(
     """Load hydrophone data from file.
 
     Args:
-        data_path: Path to data file (.bin or .csv)
+        data_path: Path to data's directory
         sampling_freq: Sampling frequency in Hz
         selected_hydrophones: List of 4 bools indicating which to load
 
@@ -94,9 +94,6 @@ def load_hydrophone_data(
 
 
 if __name__ == "__main__":
-    # Logic Version
-    LOGIC_VERSION = 1
-
     # Whether to capture new data from Logic hardware (True) or use existing file (False)
     CAPTURE_NEW_DATA = True
 

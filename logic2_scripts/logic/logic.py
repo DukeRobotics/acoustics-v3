@@ -4,7 +4,7 @@ import os
 import sys
 
 class Logic():
-    def __init__(self, sampling_freq = 781250, logic_path = "", logic_version = 1):
+    def __init__(self, sampling_freq = 781250, logic_path = ""):
         self.LAUNCH_TIMEOUT = 15
         self.QUIET = False
         self.PORT = 10430
@@ -14,20 +14,11 @@ class Logic():
         if logic_path != "":
             self.LOGIC_PATH = logic_path
         elif sys.platform == "win32":
-            if logic_version == 1:
-                self.LOGIC_PATH = "Logic_Software/Logic-1.2.40_WINDOWS/Logic.exe"
-            else:
-                self.LOGIC_PATH = 'Logic_Software/Logic-2.4.41_WINDOWS/Logic.exe'
+            self.LOGIC_PATH = 'Logic_Software/Logic-2.4.41_WINDOWS/Logic.exe'
         elif sys.platform == "darwin":
-            if logic_version == 1:
-                self.LOGIC_PATH = "Logic-1.2.40-MacOS.dmg"
-            else:
-                self.LOGIC_PATH = "Logic-2.4.41-macOS.dmg"
+            self.LOGIC_PATH = "Logic-2.4.41-macOS.dmg"
         elif sys.platform == "linux":
-            if logic_version == 1:
-                self.LOGIC_PATH = "Logic_Software/Logic-1.2.40-Linux.AppImage"
-            else:
-                self.LOGIC_PATH = 'Logic_Software/Logic-2.4.41-linux-x64.AppImage'
+            self.LOGIC_PATH = 'Logic_Software/Logic-2.4.41-linux-x64.AppImage'
         else:
             print(f"Unknown OS: {sys.platform}")
 

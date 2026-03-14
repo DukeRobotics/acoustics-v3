@@ -33,35 +33,7 @@ class HydrophoneArray:
 
     def load_from_path(self, path: str) -> None:
         """Load hydrophone data from a file (bin or csv format)."""
-        ext = os.path.splitext(path)[1].lower()
-        if ext == ".bin":
-            self._load_from_bin(path)
-        elif ext == ".csv":
-            self._load_from_csv(path)
-        else:
-            raise ValueError(f"Unsupported file type: {ext}. Expected .bin or .csv")
-
-    def _load_from_csv(self, path: str) -> None:
-        self._reset_hydrophones()
-
-        skip_rows = 0
-        with open(path, 'r', encoding='utf-8') as f:
-            for i, line in enumerate(f):
-                parts = line.strip().split(',')
-                try:
-                    float(parts[0])
-                    skip_rows = i
-                    break
-                except ValueError:
-                    continue
-
-        data = pd.read_csv(path, skiprows=skip_rows, header=None)
-
-        times = data.iloc[:, 0].to_numpy()
-        for idx, hydro in enumerate(self.hydrophones):
-            self._update_hydrophone(
-                hydro, times, data.iloc[:, idx + 1].to_numpy()
-            )
+        self._load_from_bin(path)
 
     def _load_from_bin(self, path: str) -> None:
         self._reset_hydrophones()

@@ -10,12 +10,11 @@ if __name__ == "__main__":
     SAMPLING_FREQ = 781250
     SELECTED = [True, False, True, False]
     PLOT_DATA = False
-    
+
     DATA_PATHS = [
-        "0_2026-02-07--15-24-04",
-        "2_2026-02-07--15-38-56"
+
     ]
-    
+
     ANALYZERS = [
         TOAEnvelopeAnalyzer(
             threshold_sigma=5,
@@ -37,35 +36,32 @@ if __name__ == "__main__":
             plot_results=False
         ),
     ]
-    
+
     # Setup output CSV
     timestamp = time.strftime('%Y-%m-%d--%H-%M-%S')
     OUTPUT_PATH = os.path.join("Analysis", f"analysis_{timestamp}.csv")
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    
+
     HEADERS = ["PATH", "TRUTH", "PREDICTED",
                "H0 TOA", "H1 TOA", "H2 TOA", "H3 TOA",
                "H0 NEARBY", "H1 NEARBY", "H2 NEARBY", "H3 NEARBY"]
-    
+
     with open(OUTPUT_PATH, mode="w", newline="", encoding="utf-8") as f:
         csv.writer(f).writerow(HEADERS)
-    
+
     # Initialize tracking
     confusion = {i: {j: 0 for j in range(4)} for i in range(4)}
     total_files = 0
     errors = 0
-    
+
     # Process all data files
     for data_dir in DATA_PATHS:
         truth = int(data_dir.split("_")[0])
-        
+
         for filename in os.listdir(data_dir):
-            if not filename.endswith('.bin'):
-                continue
-            
             filepath = os.path.join(data_dir, filename)
             total_files += 1
-            
+
             try:
                 # Load and analyze
                 array = load_hydrophone_data(
@@ -74,57 +70,57 @@ if __name__ == "__main__":
                     selected_hydrophones=SELECTED,
                     plot_data=PLOT_DATA
                 )
-                
+
                 results = run_controller(
                     hydrophone_array=array,
                     analyzers=ANALYZERS
                 )
-                
+
                 # Find closest hydrophone by earliest TOA time
                 toa_results = results[0]['results']
                 earliest_time = float('inf')
                 predicted = None
-                
+
                 for result in toa_results:
                     idx = result['hydrophone_idx']
                     toa_time = result.get('toa_time')
-                    
+
                     if toa_time is not None and toa_time < earliest_time:
                         earliest_time = toa_time
                         predicted = idx
-                
+
                 # Extract TOA times and nearby status for CSV
                 toa_dict = {r['hydrophone_idx']: r['toa_time'] for r in toa_results}
                 nearby_dict = {r['hydrophone_idx']: r['nearby'] for r in results[1]['results']}
-                
+
                 toas = [toa_dict.get(i) for i in range(4)]
                 nearby_status = [nearby_dict.get(i) for i in range(4)]
-                
+
                 # Write to CSV
                 row = [filepath, truth, predicted] + toas + nearby_status
                 with open(OUTPUT_PATH, mode="a", newline="", encoding="utf-8") as f:
                     csv.writer(f).writerow(row)
-                
+
                 # Update confusion matrix
                 confusion[truth][predicted] += 1
-                
+
                 print(f"Processed: {filename} | Predicted: H{predicted} | Truth: H{truth}")
-                
+
             except Exception as e:
                 print(f"Error: {filepath} - {e}")
                 errors += 1
-    
+
     # Print metrics
     correct = sum(confusion[i][i] for i in range(4))
     accuracy = 100 * correct / total_files if total_files > 0 else 0
-    
+
     print(f"\n{'='*60}")
     print("ACCURACY METRICS")
     print(f"{'='*60}")
     print(f"Total files: {total_files}")
     print(f"Errors: {errors}")
     print(f"Accuracy: {correct}/{total_files} ({accuracy:.1f}%)")
-    
+
     print("\nConfusion Matrix:")
     print("       Predicted")
     print("       0   1   2   3")
@@ -133,7 +129,7 @@ if __name__ == "__main__":
         counts = [confusion[i][j] for j in range(4)]
         if sum(counts) > 0:
             print(f"True {i} | {counts[0]:2d}  {counts[1]:2d}  {counts[2]:2d}  {counts[3]:2d}")
-    
+
     print(f"\n{'='*60}")
     print(f"Results: {OUTPUT_PATH}")
     print(f"{'='*60}")

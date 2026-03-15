@@ -138,15 +138,15 @@ def find_closest_hydrophone(analysis_results, selected=None):
     toa_results = analysis_results[0]['results']
     
     # Find hydrophone with earliest TOA time
-    latest_time = 0
+    earliest_time = float('inf')
     closest_hydrophone = None
     
     for result in toa_results:
         idx = result['hydrophone_idx']
         toa_time = result.get('toa_time')
         
-        if toa_time is not None and toa_time < latest_time:
-            latest_time = toa_time
+        if toa_time is not None and toa_time < earliest_time:
+            earliest_time = toa_time
             closest_hydrophone = idx
     
     # Get nearby status (assumes second analyzer is nearby analyzer)

@@ -12,8 +12,13 @@ if __name__ == "__main__":
     PLOT_DATA = False
     
     DATA_PATHS = [
-        "data/2.15.2026/0_logic1_hydrophone_0_closest_2026-02-15--15-52-54",
-        "data/2.15.2026/2_logic1_hydrophone_2_closest_2026-02-15--15-55-42"
+        "data/2.28.2026/0_2026-02-28--14-50-32",
+        "data/2.28.2026/0_2026-02-28--14-56-17",
+        "data/2.28.2026/0_2026-02-28--14-59-51",
+        # "data/2.28.2026/1_2026-02-28--15-10-27",
+        "data/2.28.2026/2_2026-02-28--15-25-53",
+        "data/2.28.2026/2_2026-02-28--15-29-01",
+        # "data/2.28.2026/3_backwards_2026-02-28--15-17-58",
     ]
     
     ANALYZERS = [
@@ -22,7 +27,7 @@ if __name__ == "__main__":
             raw_signal_threshold=0.5,
             margin_front=0.1,
             margin_end=0.1,
-            filter_order=16,
+            filter_order=0,
             search_band_min=25000,
             search_band_max=40000,
             plot_results=False
@@ -53,6 +58,7 @@ if __name__ == "__main__":
     # Initialize tracking
     confusion = {i: {j: 0 for j in range(4)} for i in range(4)}
     total_files = 0
+    valid_files = 0
     errors = 0
     
     # Process all data files
@@ -86,15 +92,15 @@ if __name__ == "__main__":
                 
                 # Find closest hydrophone by earliest TOA time
                 toa_results = results[0]['results']
-                latest_time = 0
+                earliest_time = float('inf')
                 predicted = None
                 
                 for result in toa_results:
                     idx = result['hydrophone_idx']
                     toa_time = result.get('toa_time')
                     
-                    if toa_time is not None and toa_time > latest_time:
-                        latest_time = toa_time
+                    if toa_time is not None and toa_time < earliest_time:
+                        earliest_time = toa_time
                         predicted = idx
                 
                 # Extract TOA times and validity for CSV
@@ -114,9 +120,10 @@ if __name__ == "__main__":
                 with open(OUTPUT_PATH, mode="a", newline="", encoding="utf-8") as f:
                     csv.writer(f).writerow(row)
                 
-                # Update confusion matrix
-                if truth is not None and predicted is not None:
+                # Update confusion matrix only for valid samples
+                if all_valid and truth is not None and predicted is not None:
                     confusion[truth][predicted] += 1
+                    valid_files += 1
                 
                 print(f"Processed: {filename} | Predicted: H{predicted} | Truth: H{truth}")
                 
@@ -126,14 +133,15 @@ if __name__ == "__main__":
     
     # Print metrics
     correct = sum(confusion[i][i] for i in range(4))
-    accuracy = 100 * correct / total_files if total_files > 0 else 0
+    accuracy = 100 * correct / valid_files if valid_files > 0 else 0
     
     print(f"\n{'='*60}")
     print("ACCURACY METRICS")
     print(f"{'='*60}")
     print(f"Total files: {total_files}")
+    print(f"Valid files: {valid_files}")
     print(f"Errors: {errors}")
-    print(f"Accuracy: {correct}/{total_files} ({accuracy:.1f}%)")
+    print(f"Accuracy: {correct}/{valid_files} ({accuracy:.1f}%)")
     
     print("\nConfusion Matrix:")
     print("       Predicted")

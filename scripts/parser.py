@@ -2,7 +2,7 @@
 import os
 import time
 import csv
-from controller import run_controller, load_hydrophone_data
+from controller import run_controller, load_hydrophone_data, check_all_valid
 from analyzers import TOAEnvelopeAnalyzer, NearbyAnalyzer
 
 if __name__ == "__main__":
@@ -19,6 +19,9 @@ if __name__ == "__main__":
     ANALYZERS = [
         TOAEnvelopeAnalyzer(
             threshold_sigma=5,
+            raw_signal_threshold=0.5,
+            margin_front=0.1,
+            margin_end=0.1,
             filter_order=16,
             search_band_min=25000,
             search_band_max=40000,
@@ -40,6 +43,8 @@ if __name__ == "__main__":
     
     HEADERS = ["PATH", "TRUTH", "PREDICTED",
                "H0 TOA", "H1 TOA", "H2 TOA", "H3 TOA",
+               "ALL_VALID",
+               "H0 VALID", "H1 VALID", "H2 VALID", "H3 VALID",
                "H0 NEARBY", "H1 NEARBY", "H2 NEARBY", "H3 NEARBY"]
     
     with open(OUTPUT_PATH, mode="w", newline="", encoding="utf-8") as f:
@@ -92,15 +97,20 @@ if __name__ == "__main__":
                         latest_time = toa_time
                         predicted = idx
                 
-                # Extract TOA times and nearby status for CSV
+                # Extract TOA times and validity for CSV
                 toa_dict = {r['hydrophone_idx']: r['toa_time'] for r in toa_results}
+                valid_dict = {r['hydrophone_idx']: r.get('is_valid', False) for r in toa_results}
                 nearby_dict = {r['hydrophone_idx']: r['nearby'] for r in results[1]['results']}
                 
                 toas = [toa_dict.get(i) for i in range(4)]
+                valid_status = [valid_dict.get(i) for i in range(4)]
                 nearby_status = [nearby_dict.get(i) for i in range(4)]
                 
+                # Check if all selected hydrophones are valid
+                all_valid = check_all_valid(toa_results, SELECTED)
+                
                 # Write to CSV
-                row = [filename, truth, predicted] + toas + nearby_status
+                row = [filename, truth, predicted] + toas + [all_valid] + valid_status + nearby_status
                 with open(OUTPUT_PATH, mode="a", newline="", encoding="utf-8") as f:
                     csv.writer(f).writerow(row)
                 

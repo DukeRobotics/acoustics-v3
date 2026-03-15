@@ -102,18 +102,37 @@ def load_hydrophone_data(
     return array
 
 
-def find_closest_hydrophone(analysis_results):
+def check_all_valid(toa_results, selected):
+    """Check if all selected hydrophones are valid.
+    
+    Args:
+        toa_results: List of TOA analysis results
+        selected: List of 4 bools indicating which hydrophones are selected
+        
+    Returns:
+        True only if all selected hydrophones have is_valid=True
+    """
+    for idx, is_selected in enumerate(selected):
+        if is_selected:
+            result = next((r for r in toa_results if r['hydrophone_idx'] == idx), None)
+            if result is None or not result.get('is_valid', False):
+                return False
+    return True
+
+
+def find_closest_hydrophone(analysis_results, selected=None):
     """Find the closest hydrophone based on TOA analysis and nearby status.
     
     Args:
         analysis_results: List of analysis results from run_controller
+        selected: List of 4 bools indicating which hydrophones are selected
         
     Returns:
-        tuple: (closest_hydrophone_index, is_nearby) where index is 0-3 or None,
-               and is_nearby is True if average nearby status indicates proximity
+        tuple: (closest_hydrophone_index, is_nearby, all_valid) where 
+               all_valid is True only if all selected hydrophones are valid
     """
     if not analysis_results or len(analysis_results) == 0:
-        return (None, False)
+        return (None, False, False)
     
     # Get TOA results (assumes first analyzer is TOA-based)
     toa_results = analysis_results[0]['results']
@@ -138,7 +157,10 @@ def find_closest_hydrophone(analysis_results):
         # Consider "nearby" if majority of hydrophones detect it nearby
         is_nearby = nearby_count >= len(nearby_results) / 2
     
-    return (closest_hydrophone, is_nearby)
+    # Check if all selected hydrophones are valid
+    all_valid = check_all_valid(toa_results, selected) if selected is not None else True
+    
+    return (closest_hydrophone, is_nearby, all_valid)
 
 
 def main():
@@ -170,13 +192,16 @@ def main():
     ANALYZERS = [
         TOAEnvelopeAnalyzer(
             threshold_sigma=5,
+            raw_signal_threshold=1,
+            margin_front=0.1,
+            margin_end=0.1,
             filter_order=16,
             search_band_min=25000,
             search_band_max=40000,
             plot_results=False
         ),
         NearbyAnalyzer(
-            threshold=1.0,
+            threshold=0.5,
             filter_order=0,
             search_band_min=25000,
             search_band_max=40000,
@@ -212,14 +237,15 @@ def main():
     )
     
     # Step 4: Find closest hydrophone and nearby status
-    closest, is_nearby = find_closest_hydrophone(analysis_results)
+    closest, is_nearby, all_valid = find_closest_hydrophone(analysis_results, SELECTED)
     
     print(f"\n{'='*60}")
     print(f"CLOSEST HYDROPHONE: {closest}")
     print(f"IS NEARBY: {is_nearby}")
+    print(f"ALL VALID: {all_valid}")
     print(f"{'='*60}")
     
-    return (closest, is_nearby)
+    return (closest, is_nearby, all_valid)
 
 if __name__ == "__main__":
     main()

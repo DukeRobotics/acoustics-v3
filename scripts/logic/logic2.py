@@ -1,18 +1,23 @@
 """Logic 2 module for interfacing with Saleae Logic 2 hardware."""
 import os
 from saleae.automation import Manager, LogicDeviceConfiguration, CaptureConfiguration, TimedCaptureMode
+from saleae.automation.errors import Logic2AlreadyRunningError
 
 
 class Logic2:
     """Interface for Saleae Logic 2 data acquisition hardware."""
     
     def __init__(self, is_mock=False):
-        self._manager = Manager.launch()
+        try:
+            self._manager = Manager.launch()
+        except Logic2AlreadyRunningError:
+            # Manager already running, connect to existing instance
+            self._manager = Manager.connect()
         
         devices = self._manager.get_devices(include_simulation_devices=is_mock)
         
         if not devices:
-            self._manager.close()
+            self.close()
             raise RuntimeError("No Logic 2 devices found")
 
         if is_mock:
@@ -24,7 +29,7 @@ class Logic2:
         """Close the Logic 2 manager."""
         self._manager.close()
     
-    def capture(self, seconds, prefix, base_dir=".\Temp_Data", sample_rate=781250, formats=["csv", "bin"]):
+    def capture(self, seconds, prefix, base_dir="./Temp_Data", sample_rate=781250, formats=["csv", "bin"]):
         """
         Capture data and export to specified formats.
         
@@ -75,5 +80,5 @@ class Logic2:
 
 if __name__ == "__main__":
     logic = Logic2(is_mock=True)
-    print(logic.capture(2,"TEST_1"))
+    print(logic.capture(2,"TEST_2"))
     logic.close()

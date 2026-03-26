@@ -29,7 +29,7 @@ class Logic2:
         """Close the Logic 2 manager."""
         self._manager.close()
     
-    def capture(self, seconds, prefix, base_dir="./Temp_Data", sample_rate=781250, formats=["csv", "bin"]):
+    def capture(self, seconds, prefix, base_dir, sample_rate=781250, formats=["csv", "bin"]):
         """
         Capture data and export to specified formats.
         
@@ -80,5 +80,5 @@ class Logic2:
 
 if __name__ == "__main__":
     logic = Logic2(is_mock=True)
-    print(logic.capture(2,"TEST_2"))
+    print(logic.capture(2,"TEST_2","./Temp_Data"))
     logic.close()

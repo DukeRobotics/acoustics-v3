@@ -59,47 +59,33 @@ def capture_data(
     os.makedirs(output_dir, exist_ok=True)
 
     if is_logic_2:
-        # Use Logic 2 interface
         logic_interface = Logic2(is_mock=is_mock)
         timestamp = time.strftime('%Y-%m-%d--%H-%M-%S')
         
-        # Determine formats for Logic 2
-        formats = []
-        if capture_format == "both" or capture_format == ".csv":
-            formats.append("csv")
-        if capture_format == "both" or capture_format == ".bin":
-            formats.append("bin")
+        format_map = {".bin": ["bin"], ".csv": ["csv"], "both": ["csv", "bin"]}
         
-        result = logic_interface.capture(
+        logic_interface.capture(
             seconds=capture_time,
             prefix=timestamp,
             base_dir=output_dir,
             sample_rate=int(sampling_freq),
-            formats=formats
+            formats=format_map[capture_format]
         )
         
         if close_logic_after:
             logic_interface.close()
         
-        # Return the directory path for Logic 2
         return os.path.join(output_dir, timestamp)
     else:
-        # Use Logic 1 interface
         logic_interface = logic.Logic(sampling_freq=sampling_freq)
         logic_interface.print_saleae_status()
 
         if capture_format == "both":
-            capture_path, _ = logic_interface.export_binary_and_csv_capture(
-                capture_time, output_dir
-            )
+            capture_path = logic_interface.export_binary_and_csv_capture(capture_time, output_dir)[0]
         elif capture_format == ".csv":
-            capture_path = logic_interface.start_csv_capture(
-                capture_time, output_dir
-            )
+            capture_path = logic_interface.start_csv_capture(capture_time, output_dir)
         else:
-            capture_path = logic_interface.export_binary_capture(
-                capture_time, output_dir
-            )
+            capture_path = logic_interface.export_binary_capture(capture_time, output_dir)
 
         if close_logic_after:
             logic_interface.kill_logic()

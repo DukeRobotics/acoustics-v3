@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import butter, sosfilt
+from scipy.signal import butter, sosfiltfilt
 
 
 class BaseAnalyzer(ABC):
@@ -192,6 +192,6 @@ class BaseAnalyzer(ABC):
             btype='band',
             output='sos'
         )
-        return sosfilt(sos, signal)
+        return sosfiltfilt(sos, signal)
 
 

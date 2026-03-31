@@ -61,19 +61,17 @@ def process_sample(array_obj, sample_name, truth, OUTPUT_PATH, SELECTED, confusi
 
 if __name__ == "__main__":
     # Configuration
-    IS_LOGIC_2 = False
+    IS_LOGIC_2 = True
     SAMPLING_FREQ = 781250
-    SELECTED = [True, False, True, False]
+    SELECTED = [True, False, False, False]
     PLOT_DATA = False
     
     DATA_PATHS = [
-        "data/2.28.2026/0_2026-02-28--14-50-32",
-        "data/2.28.2026/0_2026-02-28--14-56-17",
-        "data/2.28.2026/0_2026-02-28--14-59-51",
-        # "data/2.28.2026/1_2026-02-28--15-10-27",
-        "data/2.28.2026/2_2026-02-28--15-25-53",
-        "data/2.28.2026/2_2026-02-28--15-29-01",
-        # "data/2.28.2026/3_backwards_2026-02-28--15-17-58",
+        "data/2.22.2026/H0_Closest_0FT_2026-02-22--15-29-08",
+        "data/2.22.2026/H0_Closest_10FT_2026-02-22--15-35-26",
+        "data/2.22.2026/H0_Closest_20FT_2026-02-22--15-41-55",
+        "data/2.22.2026/H0_Closest_30FT_2026-02-22--15-47-28",
+        "data/2.22.2026/H0_Closest_40FT_2026-02-22--15-53-23",
     ]
     
     ANALYZERS = [

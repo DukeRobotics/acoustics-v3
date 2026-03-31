@@ -208,7 +208,7 @@ def main():
     SAMPLING_FREQ = 781250
 
     # Which hydrophones to load/analyze (array of 4 booleans)
-    SELECTED = [True, True, True, True]
+    SELECTED = [True, False, False, False]
 
     # Whether to plot raw signal and frequency spectrum
     PLOT_DATA = False

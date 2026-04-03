@@ -1,6 +1,14 @@
 """Garbage detector module for filtering invalid samples."""
 
 
+class ValidationReason:
+    """Validation failure reasons."""
+    VALID = "VALID"
+    WEAK_SIGNAL = "WEAK_SIGNAL"
+    TOO_EARLY = "TOO_EARLY"
+    TOO_LATE = "TOO_LATE"
+
+
 class GarbageDetector:
     """Simple utility for validating individual TOA measurements."""
 
@@ -27,7 +35,7 @@ class GarbageDetector:
         toa_time: float,
         recording_start: float,
         recording_end: float
-    ) -> bool:
+    ) -> tuple:
         """Validate a single hydrophone's TOA measurement.
         
         Args:
@@ -37,16 +45,16 @@ class GarbageDetector:
             recording_end: End time of recording (seconds)
             
         Returns:
-            True if measurement is valid, False otherwise
+            Tuple of (is_valid: bool, reason: str)
         """
         # Check raw signal amplitude
         if abs(signal_value) < self.raw_signal_threshold:
-            return False
+            return False, ValidationReason.WEAK_SIGNAL
         
         # Check timing margins
         if toa_time < recording_start + self.margin_front:
-            return False
+            return False, ValidationReason.TOO_EARLY
         if toa_time > recording_end - self.margin_end:
-            return False
+            return False, ValidationReason.TOO_LATE
         
-        return True
+        return True, ValidationReason.VALID

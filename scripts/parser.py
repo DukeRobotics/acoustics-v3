@@ -30,17 +30,24 @@ def process_sample(array_obj, sample_name, truth, OUTPUT_PATH, SELECTED, confusi
         # Extract TOA times and validity for CSV
         toa_dict = {r['hydrophone_idx']: r['toa_time'] for r in toa_results}
         valid_dict = {r['hydrophone_idx']: r.get('is_valid', False) for r in toa_results}
-        nearby_dict = {r['hydrophone_idx']: r['nearby'] for r in results[1]['results']}
+        validity_reason_dict = {r['hydrophone_idx']: r.get('validity_reason', 'UNKNOWN') for r in toa_results}
+        nearby_results = results[1]['results']
+        nearby_dict = {r['hydrophone_idx']: r['nearby'] for r in nearby_results}
+        nearby_valid_dict = {r['hydrophone_idx']: r.get('is_valid', False) for r in nearby_results}
+        delta_t_dict = {r['hydrophone_idx']: r.get('delta_t', None) for r in nearby_results}
         
         toas = [toa_dict.get(i) for i in range(4)]
         valid_status = [valid_dict.get(i) for i in range(4)]
+        validity_reasons = [validity_reason_dict.get(i) for i in range(4)]
         nearby_status = [nearby_dict.get(i) for i in range(4)]
+        nearby_valid_status = [nearby_valid_dict.get(i) for i in range(4)]
+        delta_ts = [delta_t_dict.get(i) for i in range(4)]
         
         # Check if all selected hydrophones are valid
         all_valid = check_all_valid(toa_results, SELECTED)
         
         # Write to CSV
-        row = [sample_name, truth, predicted] + toas + [all_valid] + valid_status + nearby_status
+        row = [sample_name, truth, predicted] + toas + [all_valid] + valid_status + validity_reasons + nearby_status + nearby_valid_status + delta_ts
         with open(OUTPUT_PATH, mode="a", newline="", encoding="utf-8") as f:
             csv.writer(f).writerow(row)
         
@@ -51,6 +58,7 @@ def process_sample(array_obj, sample_name, truth, OUTPUT_PATH, SELECTED, confusi
         else:
             valid_files_count = 0
         
+        print(f"\n{'='*60}")
         print(f"Processed: {sample_name} | Predicted: H{predicted} | Truth: H{truth}")
         return valid_files_count
         
@@ -86,7 +94,8 @@ if __name__ == "__main__":
             plot_results=False
         ),
         NearbyAnalyzer(
-            threshold=1.0,
+            ping_width_threshold=0.1,
+            crossing_std_dev=5,
             filter_order=0,
             search_band_min=25000,
             search_band_max=40000,
@@ -103,7 +112,10 @@ if __name__ == "__main__":
                "H0 TOA", "H1 TOA", "H2 TOA", "H3 TOA",
                "ALL_VALID",
                "H0 VALID", "H1 VALID", "H2 VALID", "H3 VALID",
-               "H0 NEARBY", "H1 NEARBY", "H2 NEARBY", "H3 NEARBY"]
+               "H0 REASON", "H1 REASON", "H2 REASON", "H3 REASON",
+               "H0 NEARBY", "H1 NEARBY", "H2 NEARBY", "H3 NEARBY",
+               "H0 NEARBY_VALID", "H1 NEARBY_VALID", "H2 NEARBY_VALID", "H3 NEARBY_VALID",
+               "H0 DELTA_T", "H1 DELTA_T", "H2 DELTA_T", "H3 DELTA_T"]
     
     with open(OUTPUT_PATH, mode="w", newline="", encoding="utf-8") as f:
         csv.writer(f).writerow(HEADERS)
@@ -129,11 +141,14 @@ if __name__ == "__main__":
                 epoch_path = os.path.join(data_dir, epoch_dir)
                 if os.path.isdir(epoch_path):
                     items.append((epoch_dir, epoch_path))
+            # Sort items numerically by epoch number
+            items.sort(key=lambda x: int(x[0].split('_')[-1]))
         else:
             for filename in os.listdir(data_dir):
                 if filename.endswith('.bin'):
                     filepath = os.path.join(data_dir, filename)
                     items.append((filename, filepath))
+            items.sort()
         
         # Process each item
         for item_name, item_path in items:

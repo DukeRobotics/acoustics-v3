@@ -105,7 +105,7 @@ class TOAEnvelopeAnalyzer(BaseAnalyzer):
         filtered_freqs = fftfreq(len(filtered_signal), 1/sampling_freq)
 
         # Validate sample using garbage detector
-        is_valid = self.garbage_detector.validate_hydrophone_toa(
+        is_valid, validity_reason = self.garbage_detector.validate_hydrophone_toa(
             signal_value=np.max(hydrophone.signal),
             toa_time=toa_time,
             recording_start=hydrophone.times[0],
@@ -122,7 +122,8 @@ class TOAEnvelopeAnalyzer(BaseAnalyzer):
             'threshold': threshold,
             'band_min': self.search_band_min,
             'band_max': self.search_band_max,
-            'is_valid': is_valid
+            'is_valid': is_valid,
+            'validity_reason': validity_reason
         }
 
     def _plot_single_signal(self, ax_time, ax_freq, hydrophone, result, idx):

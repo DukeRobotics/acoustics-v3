@@ -1,4 +1,4 @@
-"""Nearby detection using static threshold analysis."""
+"""Nearby detection using ping width analysis."""
 import numpy as np
 from scipy.fft import fft, fftfreq
 
@@ -6,21 +6,23 @@ from .base_analyzer import BaseAnalyzer
 
 
 class NearbyAnalyzer(BaseAnalyzer):
-    """Nearby presence detection using static threshold analysis.
+    """Nearby presence detection using ping width analysis.
     
-    This analyzer determines if a signal source is nearby by checking if the
-    filtered signal exceeds a static amplitude threshold.
+    This analyzer determines if a signal source is nearby by measuring the
+    ping width (time between first and second threshold crossings at parameterized std).
     """
 
-    def __init__(self, threshold, **kwargs):
+    def __init__(self, ping_width_threshold=0.01, crossing_std_dev=5, **kwargs):
         """Initialize nearby analyzer.
         
         Args:
-            threshold: Static amplitude threshold for nearby detection
+            ping_width_threshold: Ping width threshold in seconds (<=threshold = nearby)
+            crossing_std_dev: Std deviations above mean for threshold crossings
             **kwargs: Additional arguments passed to BaseAnalyzer
         """
         super().__init__(**kwargs)
-        self.threshold = threshold
+        self.ping_width_threshold = ping_width_threshold
+        self.crossing_std_dev = crossing_std_dev
 
     def get_name(self):
         """Return analyzer name.
@@ -28,7 +30,7 @@ class NearbyAnalyzer(BaseAnalyzer):
         Returns:
             String identifier for this analyzer
         """
-        return "Static Nearby Analyzer"
+        return "Ping Width Nearby Analyzer"
 
     def print_results(self, analysis_results):
         """Print nearby detection results.
@@ -37,13 +39,15 @@ class NearbyAnalyzer(BaseAnalyzer):
             analysis_results: Dictionary returned from analyze_array
         """
         super().print_results(analysis_results)
-        print(f"\nNearby Detection (threshold: {self.threshold}):")
+        print(f"\nNearby Detection (ping width threshold: {self.ping_width_threshold}s):")
         for result in analysis_results['results']:
             status = "NEARBY" if result['nearby'] else "NOT NEARBY"
-            print(f"  Hydrophone {result['hydrophone_idx']}: {status}")
+            delta_t = result.get('delta_t', None)
+            delta_t_str = f" (delta_t: {delta_t:.6f}s)" if delta_t is not None else ""
+            print(f"  Hydrophone {result['hydrophone_idx']}: {status}{delta_t_str}")
 
     def _analyze_single(self, hydrophone, sampling_freq):
-        """Analyze single hydrophone using static threshold.
+        """Analyze single hydrophone using ping width detection.
         
         Args:
             hydrophone: Hydrophone object with signal data
@@ -51,11 +55,11 @@ class NearbyAnalyzer(BaseAnalyzer):
             
         Returns:
             Dictionary containing:
-                - nearby: Boolean indicating if signal exceeds threshold
+                - nearby: Boolean indicating if ping width <= threshold
+                - delta_t: Ping width in seconds (time between threshold crossings), or None if less than 2 crossings
                 - filtered_signal: Bandpass filtered signal
                 - filtered_frequency: FFT of filtered signal
                 - filtered_freqs: Frequency bins for FFT
-                - threshold: Detection threshold value
                 - band_min: Lower frequency bound used (Hz)
                 - band_max: Upper frequency bound used (Hz)
         """
@@ -64,9 +68,25 @@ class NearbyAnalyzer(BaseAnalyzer):
             hydrophone.signal, sampling_freq
         )
 
-        # Detect threshold crossings
-        toa_candidates = np.where(filtered_signal > self.threshold)[0]
-        nearby = len(toa_candidates) > 0
+        # Compute envelope (absolute value)
+        envelope = np.abs(filtered_signal)
+        
+        # Calculate threshold at parameterized std deviations above mean
+        threshold = np.mean(envelope) + self.crossing_std_dev * np.std(envelope)
+        
+        # Find crossings above threshold
+        crossings = np.where(envelope > threshold)[0]
+        
+        # Calculate ping width (delta_t)
+        if len(crossings) >= 2:
+            first_crossing = crossings[0]
+            second_crossing = crossings[-1]
+            delta_t = (second_crossing - first_crossing) / sampling_freq
+        else:
+            delta_t = None
+        
+        # Determine if nearby based on ping width threshold
+        nearby = delta_t <= self.ping_width_threshold if delta_t is not None else False
 
         # Compute filtered frequency spectrum
         filtered_frequency = fft(filtered_signal)
@@ -74,10 +94,11 @@ class NearbyAnalyzer(BaseAnalyzer):
 
         return {
             'nearby': nearby,
+            'delta_t': delta_t,
             'filtered_signal': filtered_signal,
             'filtered_frequency': filtered_frequency,
             'filtered_freqs': filtered_freqs,
-            'threshold': self.threshold,
+            'threshold': threshold,
             'band_min': self.search_band_min,
             'band_max': self.search_band_max
         }
@@ -93,22 +114,24 @@ class NearbyAnalyzer(BaseAnalyzer):
             idx: Hydrophone index
         """
         # Time domain plot
+        envelope = np.abs(result['filtered_signal'])
         ax_time.plot(
-            hydrophone.times, result['filtered_signal'],
-            alpha=0.5, label='Filtered Signal', color='blue'
+            hydrophone.times, envelope,
+            alpha=0.5, label='Envelope', color='blue'
         )
         ax_time.axhline(
             result['threshold'], color='green',
-            linestyle=':', alpha=0.5, label='Threshold'
+            linestyle=':', alpha=0.5, label='5 Std Threshold'
         )
 
-        # Indicate if nearby
+        # Indicate if nearby with delta_t
         status = 'NEARBY' if result['nearby'] else 'NOT NEARBY'
         color = 'green' if result['nearby'] else 'red'
+        delta_t_text = f"{status}\ndelta_t: {result['delta_t']:.6f}s"
         ax_time.text(
-            0.5, 0.95, status,
+            0.5, 0.95, delta_t_text,
             transform=ax_time.transAxes,
-            fontsize=12, fontweight='bold',
+            fontsize=10, fontweight='bold',
             color=color, ha='center', va='top'
         )
 

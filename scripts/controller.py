@@ -217,7 +217,7 @@ def main():
     ANALYZERS = [
         TOAEnvelopeAnalyzer(
             threshold_sigma=5,
-            raw_signal_threshold=1,
+            raw_signal_threshold=0.5,
             margin_front=0.1,
             margin_end=0.1,
             filter_order=0,
@@ -226,7 +226,8 @@ def main():
             plot_results=False
         ),
         NearbyAnalyzer(
-            threshold=0.5,
+            ping_width_threshold=0.1,
+            crossing_std_dev=5,
             filter_order=0,
             search_band_min=25000,
             search_band_max=40000,

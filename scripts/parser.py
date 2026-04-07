@@ -5,7 +5,7 @@ import csv
 from controller import run_controller, load_hydrophone_data, check_all_valid, get_analyzers
 
 
-def process_sample(array_obj, sample_name, truth, OUTPUT_PATH, SELECTED, confusion, results_list):
+def process_sample(array_obj, sample_name, truth, distance_truth, OUTPUT_PATH, SELECTED, confusion, results_list):
     """Process a single hydrophone array sample and return results."""
     try:
         results = run_controller(
@@ -41,17 +41,20 @@ def process_sample(array_obj, sample_name, truth, OUTPUT_PATH, SELECTED, confusi
             validity_reasons[idx] = r.get('validity_reason', 'UNKNOWN')
         
         nearby_results = results[1]['results']
+        detected_nearby = None
         for r in nearby_results:
             idx = r['hydrophone_idx']
             nearby_status[idx] = r['nearby']
             nearby_valid_status[idx] = r.get('is_valid', False)
             delta_ts[idx] = r.get('delta_t', None)
+            if detected_nearby is None:
+                detected_nearby = r['nearby']
         
         # Check if all selected hydrophones are valid
         all_valid = check_all_valid(toa_results, SELECTED)
         
         # Build CSV row
-        row = [sample_name, truth, predicted]
+        row = [sample_name, truth, distance_truth, predicted]
         row.extend(toas)
         row.append(all_valid)
         row.extend(valid_status)
@@ -71,11 +74,11 @@ def process_sample(array_obj, sample_name, truth, OUTPUT_PATH, SELECTED, confusi
         
         print(f"\n{'='*60}")
         print(f"Processed: {sample_name} | Predicted: H{predicted} | Truth: H{truth}")
-        return valid_files_count
+        return valid_files_count, detected_nearby
         
     except Exception as e:
         print(f"Error: {sample_name} - {e}")
-        return 0
+        return 0, None
 
 
 if __name__ == "__main__":
@@ -100,7 +103,7 @@ if __name__ == "__main__":
     OUTPUT_PATH = os.path.join("analysis", f"analysis_{timestamp}.csv")
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     
-    HEADERS = ["PATH", "TRUTH", "PREDICTED",
+    HEADERS = ["PATH", "TRUTH", "DISTANCE_TRUTH", "PREDICTED",
                "H0 TOA", "H1 TOA", "H2 TOA", "H3 TOA",
                "ALL_VALID",
                "H0 VALID", "H1 VALID", "H2 VALID", "H3 VALID",
@@ -117,6 +120,8 @@ if __name__ == "__main__":
     total_files = 0
     valid_files = 0
     errors = 0
+    nearby_correct = 0
+    nearby_total = 0
     
     # Process all data files
     for data_dir in DATA_PATHS:
@@ -125,6 +130,24 @@ if __name__ == "__main__":
             truth = int(dir_name.split("_")[0])
         except (ValueError, IndexError):
             truth = None
+        
+        # Extract distance from directory name (e.g., "20FT" from "H0_Closest_20FT_...")
+        # Find "FT" in the string, then extract the number between underscores
+        try:
+            ft_idx = dir_name.index("FT")
+            # Find the underscore before FT
+            start_idx = dir_name.rfind("_", 0, ft_idx)
+            # Find the underscore after FT
+            end_idx = dir_name.find("_", ft_idx)
+            if end_idx == -1:
+                end_idx = len(dir_name)
+            # Extract the distance string (e.g., "20FT")
+            distance_str = dir_name[start_idx+1:end_idx]
+            # Extract numeric part
+            distance_ft = int(distance_str.replace("FT", ""))
+        except (ValueError, AttributeError):
+            distance_str = "UNKNOWN"
+            distance_ft = None
         
         # Get list of items to process (epoch dirs for Logic 2, files for Logic 1)
         items = []
@@ -154,14 +177,24 @@ if __name__ == "__main__":
                 plot_data=PLOT_DATA
             )
             
-            valid_count = process_sample(array, item_name, truth, OUTPUT_PATH, SELECTED, confusion, ANALYZERS)
+            valid_count, detected_nearby = process_sample(array, item_name, truth, distance_str, OUTPUT_PATH, SELECTED, confusion, ANALYZERS)
             valid_files += valid_count
+            
+            # Check nearby detection accuracy
+            if distance_ft is not None and detected_nearby is not None:
+                # nearby=True if distance <= 20FT, False otherwise
+                is_nearby_true = distance_ft <= 20
+                if detected_nearby == is_nearby_true:
+                    nearby_correct += 1
+                nearby_total += 1
+            
             if valid_count == 0 and item_name:
                 errors += 1
     
     # Print metrics
     correct = sum(confusion[i][i] for i in range(4))
     accuracy = 100 * correct / valid_files if valid_files > 0 else 0
+    nearby_accuracy = 100 * nearby_correct / nearby_total if nearby_total > 0 else 0
     
     print(f"\n{'='*60}")
     print("ACCURACY METRICS")
@@ -179,6 +212,13 @@ if __name__ == "__main__":
         counts = [confusion[i][j] for j in range(4)]
         if sum(counts) > 0:
             print(f"True {i} | {counts[0]:2d}  {counts[1]:2d}  {counts[2]:2d}  {counts[3]:2d}")
+    
+    print(f"\n{'='*60}")
+    print("NEARBY DETECTION (threshold: 20FT)")
+    print(f"{'='*60}")
+    print(f"Nearby Correct: {nearby_correct}/{nearby_total} ({nearby_accuracy:.1f}%)")
+    print(f"  - nearby=True (<= 20FT): distances 0FT, 10FT, 20FT")
+    print(f"  - nearby=False (> 20FT): distances 30FT, 40FT")
     
     print(f"\n{'='*60}")
     print(f"Results: {OUTPUT_PATH}")

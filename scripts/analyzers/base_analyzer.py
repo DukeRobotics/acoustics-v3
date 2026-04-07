@@ -17,8 +17,7 @@ class BaseAnalyzer(ABC):
         search_band_min: float = 25000,
         search_band_max: float = 40000,
         filter_order: int = 8,
-        plot_results: bool = False,
-        config: dict | None = None
+        plot_results_flag: bool = False
     ):
         """Initialize analyzer with signal processing parameters.
         
@@ -26,14 +25,12 @@ class BaseAnalyzer(ABC):
             search_band_min: Lower frequency bound for analysis (Hz)
             search_band_max: Upper frequency bound for analysis (Hz)
             filter_order: Order of Butterworth bandpass filter
-            plot_results: Whether to plot analysis results
-            config: Optional configuration dictionary
+            plot_results_flag: Whether to plot analysis results
         """
         self.search_band_min = search_band_min
         self.search_band_max = search_band_max
         self.filter_order = filter_order
-        self.plot_results_flag = plot_results
-        self.config = config or {}
+        self.plot_results_flag = plot_results_flag
 
     # ==================== ABSTRACT METHODS ====================
 

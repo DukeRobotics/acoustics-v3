@@ -2,7 +2,7 @@
 
 
 class ValidationReason:
-    """Validation failure reasons."""
+    """Constants for validation result reasons."""
     VALID = "VALID"
     WEAK_SIGNAL = "WEAK_SIGNAL"
     TOO_EARLY = "TOO_EARLY"

@@ -154,7 +154,7 @@ def get_analyzers():
             filter_order=6,
             search_band_min=30000,
             search_band_max=34000,
-            plot_results=False
+            plot_results_flag=False
         ),
         NearbyAnalyzer(
             ping_width_threshold=0.0147,
@@ -162,7 +162,7 @@ def get_analyzers():
             filter_order=6,
             search_band_min=30000,
             search_band_max=34000,
-            plot_results=False
+            plot_results_flag=False
         ),
     ]
 

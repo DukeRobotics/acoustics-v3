@@ -72,9 +72,6 @@ def capture_data(
             formats=format_map[capture_format]
         )
         
-        if close_logic_after:
-            logic_interface.close()
-        
         return os.path.join(output_dir, timestamp)
     else:
         logic_interface = logic.Logic(sampling_freq=sampling_freq)
@@ -86,9 +83,6 @@ def capture_data(
             capture_path = logic_interface.start_csv_capture(capture_time, output_dir)
         else:
             capture_path = logic_interface.export_binary_capture(capture_time, output_dir)
-
-        if close_logic_after:
-            logic_interface.kill_logic()
 
         return capture_path
 
@@ -197,12 +191,23 @@ def find_closest_hydrophone(analysis_results, selected=None):
             closest_hydrophone = idx
     
     # Get nearby status (assumes second analyzer is nearby analyzer)
+    # is_nearby = True if any selected AND valid hydrophone detects nearby
     is_nearby = False
     if len(analysis_results) > 1:
         nearby_results = analysis_results[1]['results']
-        nearby_count = sum(1 for r in nearby_results if r.get('nearby', False))
-        # Consider "nearby" if majority of hydrophones detect it nearby
-        is_nearby = nearby_count >= len(nearby_results) / 2
+        if selected is not None:
+            is_nearby = any(
+                r.get('nearby', False)
+                for r in nearby_results
+                if selected[r['hydrophone_idx']] and r.get('is_valid', False)
+            )
+        else:
+            # If no selected filter, use any valid hydrophone
+            is_nearby = any(
+                r.get('nearby', False)
+                for r in nearby_results
+                if r.get('is_valid', False)
+            )
     
     # Check if all selected hydrophones are valid
     all_valid = check_all_valid(toa_results, selected) if selected is not None else True
@@ -289,39 +294,53 @@ def main():
 def run_voting_ensemble(num_votes_needed=5):
     """Run main() multiple times and vote on is_nearby result.
     
+    Collects votes until reaching num_votes_needed of one outcome (True or False).
+    Returns as soon as one outcome gets num_votes_needed votes.
+    
     Args:
-        num_votes_needed: Number of valid votes needed to make decision (default 5)
+        num_votes_needed: Number of votes needed for either True or False to win
         
     Returns:
         Dict containing:
-            - is_nearby: Majority vote result
-            - votes: List of individual is_nearby votes from each sample
+            - is_nearby: The outcome that reached num_votes_needed first
+            - votes: List of individual is_nearby votes
             - nearby_count: How many votes were True
             - num_valid_samples: Total valid samples collected
     """
+    true_count = 0
+    false_count = 0
     votes = []
-    print(f"Collecting {num_votes_needed} valid votes...")
+    print(f"Collecting votes until one outcome reaches {num_votes_needed}...")
     
-    while len(votes) < num_votes_needed:
+    while True:
         closest, is_nearby, all_valid = main()
         if all_valid:
             votes.append(is_nearby)
-            print(f"  Vote {len(votes)}/{num_votes_needed}: {is_nearby}")
+            if is_nearby:
+                true_count += 1
+            else:
+                false_count += 1
+            print(f"  Vote {len(votes)}: {is_nearby} (True: {true_count}, False: {false_count})")
+            
+            # Check if either outcome has reached the threshold
+            if true_count >= num_votes_needed:
+                print(f"Result: True ({true_count} True votes)")
+                return {
+                    'is_nearby': True,
+                    'votes': votes,
+                    'nearby_count': true_count,
+                    'num_valid_samples': len(votes)
+                }
+            if false_count >= num_votes_needed:
+                print(f"Result: False ({false_count} False votes)")
+                return {
+                    'is_nearby': False,
+                    'votes': votes,
+                    'nearby_count': true_count,
+                    'num_valid_samples': len(votes)
+                }
         else:
             print("  Invalid, retrying...")
-    
-    nearby_count = sum(votes)
-    majority_nearby = nearby_count > len(votes) / 2
-    
-    print(f"Result: {votes}")
-    print(f"Majority: {majority_nearby}")
-    
-    return {
-        'is_nearby': majority_nearby,
-        'votes': votes,
-        'nearby_count': nearby_count,
-        'num_valid_samples': len(votes)
-    }
 
 if __name__ == "__main__":
     main()

@@ -2,7 +2,7 @@
 import os
 import time
 import csv
-from controller import run_controller, load_hydrophone_data, check_all_valid, get_analyzers
+from controller import run_controller, load_hydrophone_data, check_all_valid, get_analyzers, find_closest_hydrophone
 
 
 def process_sample(array_obj, sample_name, truth, distance_truth, OUTPUT_PATH, SELECTED, confusion, results_list):
@@ -13,20 +13,11 @@ def process_sample(array_obj, sample_name, truth, distance_truth, OUTPUT_PATH, S
             analyzers=results_list
         )
         
-        # Find closest hydrophone by earliest TOA time
+        # Find closest hydrophone and nearby status using controller's logic
+        predicted, detected_nearby, all_valid = find_closest_hydrophone(results, SELECTED)
+        
+        # Extract results indexed by hydrophone (for CSV columns)
         toa_results = results[0]['results']
-        earliest_time = float('inf')
-        predicted = None
-        
-        for result in toa_results:
-            idx = result['hydrophone_idx']
-            toa_time = result.get('toa_time')
-            
-            if toa_time is not None and toa_time < earliest_time:
-                earliest_time = toa_time
-                predicted = idx
-        
-        # Extract results indexed by hydrophone
         toas = [None] * 4
         valid_status = [None] * 4
         validity_reasons = [None] * 4
@@ -41,20 +32,14 @@ def process_sample(array_obj, sample_name, truth, distance_truth, OUTPUT_PATH, S
             validity_reasons[idx] = r.get('validity_reason', 'UNKNOWN')
         
         nearby_results = results[1]['results']
-        detected_nearby = None
         for r in nearby_results:
             idx = r['hydrophone_idx']
             nearby_status[idx] = r['nearby']
             nearby_valid_status[idx] = r.get('is_valid', False)
             delta_ts[idx] = r.get('delta_t', None)
-            if detected_nearby is None:
-                detected_nearby = r['nearby']
-        
-        # Check if all selected hydrophones are valid
-        all_valid = check_all_valid(toa_results, SELECTED)
         
         # Build CSV row
-        row = [sample_name, truth, distance_truth, predicted]
+        row = [sample_name, truth, distance_truth, predicted, detected_nearby]
         row.extend(toas)
         row.append(all_valid)
         row.extend(valid_status)
@@ -82,6 +67,9 @@ def process_sample(array_obj, sample_name, truth, distance_truth, OUTPUT_PATH, S
 
 
 if __name__ == "__main__":
+    # Start timing
+    script_start_time = time.perf_counter()
+    
     # Configuration
     IS_LOGIC_2 = True
     SAMPLING_FREQ = 781250
@@ -103,7 +91,7 @@ if __name__ == "__main__":
     OUTPUT_PATH = os.path.join("analysis", f"analysis_{timestamp}.csv")
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     
-    HEADERS = ["PATH", "TRUTH", "DISTANCE_TRUTH", "PREDICTED",
+    HEADERS = ["PATH", "TRUTH", "DISTANCE_TRUTH", "PREDICTED", "DETECTED_NEARBY",
                "H0 TOA", "H1 TOA", "H2 TOA", "H3 TOA",
                "ALL_VALID",
                "H0 VALID", "H1 VALID", "H2 VALID", "H3 VALID",
@@ -122,6 +110,7 @@ if __name__ == "__main__":
     errors = 0
     nearby_correct = 0
     nearby_total = 0
+    sample_times = []
     
     # Process all data files
     for data_dir in DATA_PATHS:
@@ -168,6 +157,7 @@ if __name__ == "__main__":
         # Process each item
         for item_name, item_path in items:
             total_files += 1
+            sample_start_time = time.perf_counter()
             
             array = load_hydrophone_data(
                 data_path=item_path,
@@ -179,6 +169,9 @@ if __name__ == "__main__":
             
             valid_count, detected_nearby = process_sample(array, item_name, truth, distance_str, OUTPUT_PATH, SELECTED, confusion, ANALYZERS)
             valid_files += valid_count
+            
+            sample_elapsed_time = time.perf_counter() - sample_start_time
+            sample_times.append(sample_elapsed_time)
             
             # Check nearby detection accuracy
             if distance_ft is not None and detected_nearby is not None:
@@ -195,6 +188,10 @@ if __name__ == "__main__":
     correct = sum(confusion[i][i] for i in range(4))
     accuracy = 100 * correct / valid_files if valid_files > 0 else 0
     nearby_accuracy = 100 * nearby_correct / nearby_total if nearby_total > 0 else 0
+    
+    # Calculate timing metrics
+    script_elapsed_time = time.perf_counter() - script_start_time
+    avg_sample_time = sum(sample_times) / len(sample_times) if sample_times else 0
     
     print(f"\n{'='*60}")
     print("ACCURACY METRICS")
@@ -219,6 +216,16 @@ if __name__ == "__main__":
     print(f"Nearby Correct: {nearby_correct}/{nearby_total} ({nearby_accuracy:.1f}%)")
     print(f"  - nearby=True (<= 20FT): distances 0FT, 10FT, 20FT")
     print(f"  - nearby=False (> 20FT): distances 30FT, 40FT")
+    
+    print(f"\n{'='*60}")
+    print("TIME ANALYSIS")
+    print(f"{'='*60}")
+    print(f"Average time per sample: {avg_sample_time:.3f}s")
+    print(f"Total script execution time: {script_elapsed_time:.1f}s ({script_elapsed_time/60:.1f}m)")
+    print(f"Total samples processed: {len(sample_times)}")
+    if sample_times:
+        print(f"Min sample time: {min(sample_times):.3f}s")
+        print(f"Max sample time: {max(sample_times):.3f}s")
     
     print(f"\n{'='*60}")
     print(f"Results: {OUTPUT_PATH}")

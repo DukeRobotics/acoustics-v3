@@ -139,6 +139,34 @@ def check_all_valid(toa_results, selected):
     return True
 
 
+def get_analyzers():
+    """Get configured analyzer instances.
+    
+    Returns:
+        List of analyzer instances with optimized parameters
+    """
+    return [
+        TOAEnvelopeAnalyzer(
+            threshold_sigma=5,
+            raw_signal_threshold=0.5,
+            margin_front=0.1,
+            margin_end=0.1,
+            filter_order=6,
+            search_band_min=30000,
+            search_band_max=34000,
+            plot_results=False
+        ),
+        NearbyAnalyzer(
+            ping_width_threshold=0.0147,
+            crossing_std_dev=5,
+            filter_order=6,
+            search_band_min=30000,
+            search_band_max=34000,
+            plot_results=False
+        ),
+    ]
+
+
 def find_closest_hydrophone(analysis_results, selected=None):
     """Find the closest hydrophone based on TOA analysis and nearby status.
     
@@ -214,26 +242,7 @@ def main():
     PLOT_DATA = False
 
     # Analyzer(s) for TOA detection (set to None to skip analysis)
-    ANALYZERS = [
-        TOAEnvelopeAnalyzer(
-            threshold_sigma=5,
-            raw_signal_threshold=0.5,
-            margin_front=0.1,
-            margin_end=0.1,
-            filter_order=6,
-            search_band_min=30000,
-            search_band_max=34000,
-            plot_results=False
-        ),
-        NearbyAnalyzer(
-            ping_width_threshold=0.0147,
-            crossing_std_dev=5,
-            filter_order=6,
-            search_band_min=30000,
-            search_band_max=34000,
-            plot_results=False
-        ),
-    ]
+    ANALYZERS = get_analyzers()
 
     # Step 1: Get data (capture new or load existing)
     if CAPTURE_NEW_DATA:
@@ -275,6 +284,44 @@ def main():
     print(f"{'='*60}")
     
     return (closest, is_nearby, all_valid)
+
+
+def run_voting_ensemble(num_votes_needed=5):
+    """Run main() multiple times and vote on is_nearby result.
+    
+    Args:
+        num_votes_needed: Number of valid votes needed to make decision (default 5)
+        
+    Returns:
+        Dict containing:
+            - is_nearby: Majority vote result
+            - votes: List of individual is_nearby votes from each sample
+            - nearby_count: How many votes were True
+            - num_valid_samples: Total valid samples collected
+    """
+    votes = []
+    print(f"Collecting {num_votes_needed} valid votes...")
+    
+    while len(votes) < num_votes_needed:
+        closest, is_nearby, all_valid = main()
+        if all_valid:
+            votes.append(is_nearby)
+            print(f"  Vote {len(votes)}/{num_votes_needed}: {is_nearby}")
+        else:
+            print("  Invalid, retrying...")
+    
+    nearby_count = sum(votes)
+    majority_nearby = nearby_count > len(votes) / 2
+    
+    print(f"Result: {votes}")
+    print(f"Majority: {majority_nearby}")
+    
+    return {
+        'is_nearby': majority_nearby,
+        'votes': votes,
+        'nearby_count': nearby_count,
+        'num_valid_samples': len(votes)
+    }
 
 if __name__ == "__main__":
     main()

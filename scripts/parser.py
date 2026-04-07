@@ -2,8 +2,7 @@
 import os
 import time
 import csv
-from controller import run_controller, load_hydrophone_data, check_all_valid
-from analyzers import TOAEnvelopeAnalyzer, NearbyAnalyzer
+from controller import run_controller, load_hydrophone_data, check_all_valid, get_analyzers
 
 
 def process_sample(array_obj, sample_name, truth, OUTPUT_PATH, SELECTED, confusion, results_list):
@@ -27,27 +26,39 @@ def process_sample(array_obj, sample_name, truth, OUTPUT_PATH, SELECTED, confusi
                 earliest_time = toa_time
                 predicted = idx
         
-        # Extract TOA times and validity for CSV
-        toa_dict = {r['hydrophone_idx']: r['toa_time'] for r in toa_results}
-        valid_dict = {r['hydrophone_idx']: r.get('is_valid', False) for r in toa_results}
-        validity_reason_dict = {r['hydrophone_idx']: r.get('validity_reason', 'UNKNOWN') for r in toa_results}
-        nearby_results = results[1]['results']
-        nearby_dict = {r['hydrophone_idx']: r['nearby'] for r in nearby_results}
-        nearby_valid_dict = {r['hydrophone_idx']: r.get('is_valid', False) for r in nearby_results}
-        delta_t_dict = {r['hydrophone_idx']: r.get('delta_t', None) for r in nearby_results}
+        # Extract results indexed by hydrophone
+        toas = [None] * 4
+        valid_status = [None] * 4
+        validity_reasons = [None] * 4
+        nearby_status = [None] * 4
+        nearby_valid_status = [None] * 4
+        delta_ts = [None] * 4
         
-        toas = [toa_dict.get(i) for i in range(4)]
-        valid_status = [valid_dict.get(i) for i in range(4)]
-        validity_reasons = [validity_reason_dict.get(i) for i in range(4)]
-        nearby_status = [nearby_dict.get(i) for i in range(4)]
-        nearby_valid_status = [nearby_valid_dict.get(i) for i in range(4)]
-        delta_ts = [delta_t_dict.get(i) for i in range(4)]
+        for r in toa_results:
+            idx = r['hydrophone_idx']
+            toas[idx] = r['toa_time']
+            valid_status[idx] = r.get('is_valid', False)
+            validity_reasons[idx] = r.get('validity_reason', 'UNKNOWN')
+        
+        nearby_results = results[1]['results']
+        for r in nearby_results:
+            idx = r['hydrophone_idx']
+            nearby_status[idx] = r['nearby']
+            nearby_valid_status[idx] = r.get('is_valid', False)
+            delta_ts[idx] = r.get('delta_t', None)
         
         # Check if all selected hydrophones are valid
         all_valid = check_all_valid(toa_results, SELECTED)
         
-        # Write to CSV
-        row = [sample_name, truth, predicted] + toas + [all_valid] + valid_status + validity_reasons + nearby_status + nearby_valid_status + delta_ts
+        # Build CSV row
+        row = [sample_name, truth, predicted]
+        row.extend(toas)
+        row.append(all_valid)
+        row.extend(valid_status)
+        row.extend(validity_reasons)
+        row.extend(nearby_status)
+        row.extend(nearby_valid_status)
+        row.extend(delta_ts)
         with open(OUTPUT_PATH, mode="a", newline="", encoding="utf-8") as f:
             csv.writer(f).writerow(row)
         
@@ -82,26 +93,7 @@ if __name__ == "__main__":
         "data/2.22.2026/H0_Closest_40FT_2026-02-22--15-53-23",
     ]
     
-    ANALYZERS = [
-        TOAEnvelopeAnalyzer(
-            threshold_sigma=5,
-            raw_signal_threshold=0.5,
-            margin_front=0.1,
-            margin_end=0.1,
-            filter_order=6,
-            search_band_min=30000,
-            search_band_max=34000,
-            plot_results=False
-        ),
-        NearbyAnalyzer(
-            ping_width_threshold=0.0147,
-            crossing_std_dev=5,
-            filter_order=6,
-            search_band_min=30000,
-            search_band_max=34000,
-            plot_results=False
-        ),
-    ]
+    ANALYZERS = get_analyzers()
     
     # Setup output CSV
     timestamp = time.strftime('%Y-%m-%d--%H-%M-%S')

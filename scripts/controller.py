@@ -220,17 +220,17 @@ def main():
             raw_signal_threshold=0.5,
             margin_front=0.1,
             margin_end=0.1,
-            filter_order=0,
-            search_band_min=25000,
-            search_band_max=40000,
+            filter_order=6,
+            search_band_min=30000,
+            search_band_max=34000,
             plot_results=False
         ),
         NearbyAnalyzer(
-            ping_width_threshold=0.1,
+            ping_width_threshold=0.0147,
             crossing_std_dev=5,
-            filter_order=0,
-            search_band_min=25000,
-            search_band_max=40000,
+            filter_order=6,
+            search_band_min=30000,
+            search_band_max=34000,
             plot_results=False
         ),
     ]

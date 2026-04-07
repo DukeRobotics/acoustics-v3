@@ -149,4 +149,4 @@ class NearbyAnalyzer(BaseAnalyzer):
             result['band_max'], color='red',
             linestyle='--', alpha=0.5
         )
-        ax_freq.set_xlim([0, 100000])  # Focus on relevant frequency range
+        ax_freq.set_xlim([0, 100000])

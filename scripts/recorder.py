@@ -69,12 +69,8 @@ def collect_batch_data(
 
 if __name__ == "__main__":
     # ==================== CONFIGURATION ====================
-
-    # Whether to use Logic 2 or Logic 1
-    IS_LOGIC_2 = False
-
     # Whether to use mock device for Logic 2 (True) or real device (False)
-    USE_MOCK_DEVICE = True
+    USE_MOCK_DEVICE = False
 
     # Name for this test (0,1,2,3)
     TEST_NAME = "0"
@@ -99,6 +95,6 @@ if __name__ == "__main__":
         capture_time=CAPTURE_TIME,
         output_base_path=OUTPUT_PATH,
         test_name=TEST_NAME,
-        is_logic_2=IS_LOGIC_2,
+        is_logic_2=True,
         is_mock=USE_MOCK_DEVICE
     )

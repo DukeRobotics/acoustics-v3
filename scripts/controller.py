@@ -165,57 +165,42 @@ def run_voting_ensemble(num_votes_needed=5):
         num_votes_needed: Number of votes needed to win
         
     Returns:
-        Dict with is_nearby, votes list, nearby_count, and num_valid_samples
+        Dict with is_nearby, votes list
     """
-    true_count = 0
-    false_count = 0
     votes = []
-    max_samples = num_votes_needed * 3
+    max_attempts = num_votes_needed * 3
     
-    print(f"Starting voting ensemble ({num_votes_needed} votes needed, max {max_samples} samples)...")
+    print(f"Starting voting ensemble ({num_votes_needed} votes needed, max {max_attempts} attempts)...")
     
-    while len(votes) < max_samples:
+    for attempt in range(1, max_attempts + 1):
         is_nearby_val, is_valid, _ = orchestration_for_one_sample()
         
         if is_valid:
             votes.append(is_nearby_val)
-            if is_nearby_val:
-                true_count += 1
-            else:
-                false_count += 1
-            
-            print(f"  Vote {len(votes)}: {is_nearby_val} (True: {true_count}, False: {false_count})")
-            
-            if true_count >= num_votes_needed:
-                print(f"Result: True ({true_count} votes)")
-                SALEAE.close()
-                return {
-                    'is_nearby': True,
-                    'votes': votes,
-                    'nearby_count': true_count,
-                    'num_valid_samples': len(votes)
-                }
-            
-            if false_count >= num_votes_needed:
-                print(f"Result: False ({false_count} votes)")
-                SALEAE.close()
-                return {
-                    'is_nearby': False,
-                    'votes': votes,
-                    'nearby_count': true_count,
-                    'num_valid_samples': len(votes)
-                }
         else:
-            print(f"  Invalid sample, retrying...")
+            votes.append(None)
+        
+        true_count = votes.count(True)
+        false_count = votes.count(False)
+        
+        if is_valid:
+            print(f"  Vote {len(votes)}: {is_nearby_val} (True: {true_count}, False: {false_count})")
+        else:
+            print(f"  Invalid sample, retrying... ({attempt}/{max_attempts})")
+        
+        if true_count >= num_votes_needed:
+            print(f"Result: True ({true_count} votes)")
+            SALEAE.close()
+            return {'is_nearby': True, 'votes': votes}
+        
+        if false_count >= num_votes_needed:
+            print(f"Result: False ({false_count} votes)")
+            SALEAE.close()
+            return {'is_nearby': False, 'votes': votes}
     
-    print(f"Max samples reached. Returning False.")
+    print(f"Max attempts reached. Returning False.")
     SALEAE.close()
-    return {
-        'is_nearby': False,
-        'votes': votes,
-        'nearby_count': true_count,
-        'num_valid_samples': len(votes)
-    }
+    return {'is_nearby': False, 'votes': votes}
 
 
 if __name__ == "__main__":

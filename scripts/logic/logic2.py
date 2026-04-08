@@ -42,6 +42,7 @@ class Logic2:
         
         Returns:
             dict with paths to exported files
+            Parent path of exported files. Common between Logic 1 and Logic 2
         """
         # Create output directory with absolute path
         output_dir = os.path.abspath(os.path.join(base_dir, prefix))
@@ -76,7 +77,7 @@ class Logic2:
             results["bin"] = os.path.join(output_dir)
         
         capture.close()
-        return results
+        return results, output_dir
 
 if __name__ == "__main__":
     logic = Logic2(is_mock=True)

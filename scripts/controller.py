@@ -1,131 +1,111 @@
 """Controller module for hydrophone data acquisition and analysis."""
 import os
 import time
-from logic import logic
 from logic.logic2 import Logic2
 from hydrophones import hydrophone_array
 from analyzers import TOAEnvelopeAnalyzer, NearbyAnalyzer
 
+# Whether to capture new data from Logic hardware (True) or use existing file (False)
+CAPTURE_NEW_DATA = True
 
-def run_controller(
-        hydrophone_array,
-        analyzers=None
-        ):
-    """Run analysis on hydrophone array.
+# Path to existing data file (used when CAPTURE_NEW_DATA = False)
+DATA_FILE = ""
 
-    Args:
-        hydrophone_array: HydrophoneArray with loaded data
-        analyzers: Optional analyzer instance or list of analyzer instances to run
+# Whether to use mock device for Logic 2 (True) or real device (False)
+USE_MOCK_DEVICE = True
 
-    Returns:
-        Single analysis result dict if one analyzer, or list of dicts if multiple
-    """
-    if analyzers is None:
-        return None
+# Duration of capture in seconds (only used if CAPTURE_NEW_DATA = True)
+CAPTURE_TIME = 2
+
+# Format for capture: 'bin' and/or 'csv' (only used if CAPTURE_NEW_DATA = True)
+CAPTURE_FORMAT = ["bin"]
+
+# Output directory for captured data (only used if CAPTURE_NEW_DATA = True)
+CAPTURE_OUTPUT_DIR = "Temp_Data"
+
+# Sampling frequency in Hz for data acquisition
+SAMPLING_FREQ = 781250
+
+# Which hydrophones to load/analyze (array of 4 booleans)
+SELECTED = [True, False, False, False]
+
+# Whether to plot raw signal and frequency spectrum
+PLOT_DATA = False
+
+# Analyzer(s) for TOA detection (set to None to skip analysis)
+ANALYZERS = [
+    TOAEnvelopeAnalyzer(
+        threshold_sigma=5,
+        raw_signal_threshold=0.5,
+        margin_front=0.1,
+        margin_end=0.1,
+        filter_order=6,
+        search_band_min=30000,
+        search_band_max=34000,
+        plot_results_flag=False
+    ),
+    NearbyAnalyzer(
+        ping_width_threshold=0.0147,
+        crossing_std_dev=5,
+        filter_order=6,
+        search_band_min=30000,
+        search_band_max=34000,
+        plot_results_flag=False
+    ),
+]
+
+# TODO: Write a comment
+SALEAE = Logic2(is_mock=USE_MOCK_DEVICE)
+
+# TODO: Write a comment
+ARRAY = hydrophone_array.HydrophoneArray(
+    sampling_freq=SAMPLING_FREQ,
+    selected=SELECTED
+)
+
+def capture_data(prefix: str = ""):
+    if not prefix:
+        prefix = time.strftime('%Y-%m-%d--%H-%M-%S')
     
+    _, data_path = SALEAE.capture(
+        seconds=CAPTURE_TIME,
+        prefix=prefix,
+        base_dir=CAPTURE_OUTPUT_DIR,
+        sample_rate=int(SAMPLING_FREQ),
+        formats=CAPTURE_FORMAT
+    )
+    return data_path
+
+def load_hydrophone_data(data_path: str):
+    ARRAY.load_from_path(data_path, True)
+    if PLOT_DATA:
+        ARRAY.plot_hydrophones()
+
+def run_analyzers():
+    """Run all configured analyzers on hydrophone array.
+    
+    Returns:
+        List of analysis results from each analyzer
+    """
     results = []
-    for analyzer in analyzers:
+    for analyzer in ANALYZERS:
         print(f"\n{'='*60}")
-        analysis_result = analyzer.analyze_array(hydrophone_array)
+        analysis_result = analyzer.analyze_array(ARRAY)
         analyzer.print_results(analysis_result)
         results.append(analysis_result)
-
     return results
 
 
-def capture_data(
-        sampling_freq,
-        capture_time,
-        capture_format,
-        output_dir,
-        is_logic_2=False,
-        is_mock=False,
-        close_logic_after=True
-        ):
-    """Capture new data from Logic hardware.
-
-    Args:
-        sampling_freq: Sampling frequency in Hz
-        capture_time: Duration of capture in seconds
-        capture_format: '.bin', '.csv', or 'both'
-        output_dir: Directory to save capture files
-        is_logic_2: Whether to use Logic 2 (True) or Logic 1 (False)
-        is_mock: Whether to use mock device for Logic 2 (True) or real device (False)
-        close_logic_after: Whether to close Logic after capture
-
-    Returns:
-        Path to captured data directory/file
-    """
-    os.makedirs(output_dir, exist_ok=True)
-
-    if is_logic_2:
-        logic_interface = Logic2(is_mock=is_mock)
-        timestamp = time.strftime('%Y-%m-%d--%H-%M-%S')
-        
-        format_map = {".bin": ["bin"], ".csv": ["csv"], "both": ["csv", "bin"]}
-        
-        logic_interface.capture(
-            seconds=capture_time,
-            prefix=timestamp,
-            base_dir=output_dir,
-            sample_rate=int(sampling_freq),
-            formats=format_map[capture_format]
-        )
-        
-        return os.path.join(output_dir, timestamp)
-    else:
-        logic_interface = logic.Logic(sampling_freq=sampling_freq)
-        logic_interface.print_saleae_status()
-
-        if capture_format == "both":
-            capture_path = logic_interface.export_binary_and_csv_capture(capture_time, output_dir)[0]
-        elif capture_format == ".csv":
-            capture_path = logic_interface.start_csv_capture(capture_time, output_dir)
-        else:
-            capture_path = logic_interface.export_binary_capture(capture_time, output_dir)
-
-        return capture_path
-
-
-def load_hydrophone_data(
-        data_path,
-        sampling_freq,
-        selected_hydrophones,
-        is_logic_2,
-        plot_data
-        ):
-    """Load hydrophone data from file.
-
-    Args:
-        data_path: Path to data file (.bin or .csv)
-        sampling_freq: Sampling frequency in Hz
-        selected_hydrophones: List of 4 bools indicating which to load
-
-    Returns:
-        HydrophoneArray with loaded data
-    """
-    array = hydrophone_array.HydrophoneArray(
-        sampling_freq=sampling_freq,
-        selected=selected_hydrophones
-    )
-    array.load_from_path(data_path, is_logic_2)
-    
-    if plot_data:
-        array.plot_hydrophones()
-    return array
-
-
-def check_all_valid(toa_results, selected):
+def valid_sample(toa_results):
     """Check if all selected hydrophones are valid.
     
     Args:
         toa_results: List of TOA analysis results
-        selected: List of 4 bools indicating which hydrophones are selected
         
     Returns:
         True only if all selected hydrophones have is_valid=True
     """
-    for idx, is_selected in enumerate(selected):
+    for idx, is_selected in enumerate(SELECTED):
         if is_selected:
             result = next((r for r in toa_results if r['hydrophone_idx'] == idx), None)
             if result is None or not result.get('is_valid', False):
@@ -133,206 +113,92 @@ def check_all_valid(toa_results, selected):
     return True
 
 
-def get_analyzers():
-    """Get configured analyzer instances.
-    
-    Returns:
-        List of analyzer instances with optimized parameters
-    """
-    return [
-        TOAEnvelopeAnalyzer(
-            threshold_sigma=5,
-            raw_signal_threshold=0.5,
-            margin_front=0.1,
-            margin_end=0.1,
-            filter_order=6,
-            search_band_min=30000,
-            search_band_max=34000,
-            plot_results_flag=False
-        ),
-        NearbyAnalyzer(
-            ping_width_threshold=0.0147,
-            crossing_std_dev=5,
-            filter_order=6,
-            search_band_min=30000,
-            search_band_max=34000,
-            plot_results_flag=False
-        ),
-    ]
-
-
-def find_closest_hydrophone(analysis_results, selected=None):
-    """Find the closest hydrophone based on TOA analysis and nearby status.
+def nearby(nearby_results):
+    """Check if any selected hydrophone detects nearby signal.
     
     Args:
-        analysis_results: List of analysis results from run_controller
-        selected: List of 4 bools indicating which hydrophones are selected
+        nearby_results: List of nearby analysis results
         
     Returns:
-        tuple: (closest_hydrophone_index, is_nearby, all_valid) where 
-               all_valid is True only if all selected hydrophones are valid
+        True if any selected and valid hydrophone detects nearby
     """
-    if not analysis_results or len(analysis_results) == 0:
-        return (None, False, False)
-    
-    # Get TOA results (assumes first analyzer is TOA-based)
-    toa_results = analysis_results[0]['results']
-    
-    # Find hydrophone with earliest TOA time
-    earliest_time = float('inf')
-    closest_hydrophone = None
-    
-    for result in toa_results:
+    for result in nearby_results:
         idx = result['hydrophone_idx']
-        toa_time = result.get('toa_time')
-        
-        if toa_time is not None and toa_time < earliest_time:
-            earliest_time = toa_time
-            closest_hydrophone = idx
+        if SELECTED[idx] and result.get('is_valid', False):
+            if result.get('nearby', False):
+                return True
+    return False
+
+
+def orchestration_for_one_sample():
+    """Run single sample through capture and analysis pipeline.
     
-    # Get nearby status (assumes second analyzer is nearby analyzer)
-    # is_nearby = True if any selected AND valid hydrophone detects nearby
-    is_nearby = False
-    if len(analysis_results) > 1:
-        nearby_results = analysis_results[1]['results']
-        if selected is not None:
-            is_nearby = any(
-                r.get('nearby', False)
-                for r in nearby_results
-                if selected[r['hydrophone_idx']] and r.get('is_valid', False)
-            )
-        else:
-            # If no selected filter, use any valid hydrophone
-            is_nearby = any(
-                r.get('nearby', False)
-                for r in nearby_results
-                if r.get('is_valid', False)
-            )
+    Returns:
+        Tuple of (is_nearby, is_valid) from the single sample
+    """
+    data_path = capture_data()
+    load_hydrophone_data(data_path)
     
-    # Check if all selected hydrophones are valid
-    all_valid = check_all_valid(toa_results, selected) if selected is not None else True
+    results = run_analyzers()
     
-    return (closest_hydrophone, is_nearby, all_valid)
-
-
-def main():
-    # Whether to use Logic 2 or Logic 1
-    IS_LOGIC_2 = True
-
-    # Whether to use mock device for Logic 2 (True) or real device (False)
-    USE_MOCK_DEVICE = False
-
-    # Whether to capture new data from Logic hardware (True) or use existing file (False)
-    CAPTURE_NEW_DATA = True
-
-    # Path to existing data file (used when CAPTURE_NEW_DATA = False)
-    DATA_FILE = "data/2.28.2026/0_2026-02-28--14-50-32/0_epoch_0.bin"
-
-    # Duration of capture in seconds (only used if CAPTURE_NEW_DATA = True)
-    CAPTURE_TIME = 2
-
-    # Format for capture: '.bin', '.csv', or 'both' (only used if CAPTURE_NEW_DATA = True)
-    CAPTURE_FORMAT = ".bin"
-
-    # Output directory for captured data (only used if CAPTURE_NEW_DATA = True)
-    CAPTURE_OUTPUT = "Temp_Data"
-
-    # Sampling frequency in Hz for data acquisition
-    SAMPLING_FREQ = 781250
-
-    # Which hydrophones to load/analyze (array of 4 booleans)
-    SELECTED = [True, False, False, False]
-
-    # Whether to plot raw signal and frequency spectrum
-    PLOT_DATA = False
-
-    # Analyzer(s) for TOA detection (set to None to skip analysis)
-    ANALYZERS = get_analyzers()
-
-    # Step 1: Get data (capture new or load existing)
-    if CAPTURE_NEW_DATA:
-        timestamp = time.strftime('%Y-%m-%d--%H-%M-%S')
-        output_dir = os.path.join(CAPTURE_OUTPUT, timestamp)
-        DATA_PATH = capture_data(
-            sampling_freq=SAMPLING_FREQ,
-            capture_time=CAPTURE_TIME,
-            capture_format=CAPTURE_FORMAT,
-            output_dir=CAPTURE_OUTPUT,
-            is_logic_2=IS_LOGIC_2,
-            is_mock=USE_MOCK_DEVICE
-        )
-    else:
-        DATA_PATH = DATA_FILE
-
-    # Step 2: Load data into hydrophone array
-    hydrophone_array_obj = load_hydrophone_data(
-        data_path=DATA_PATH,
-        sampling_freq=SAMPLING_FREQ,
-        selected_hydrophones=SELECTED,
-        is_logic_2=IS_LOGIC_2,
-        plot_data=PLOT_DATA
-    )
-
-    # Step 3: Run analysis
-    analysis_results = run_controller(
-        hydrophone_array=hydrophone_array_obj,
-        analyzers=ANALYZERS
-    )
+    if not results:
+        return (False, False)
     
-    # Step 4: Find closest hydrophone and nearby status
-    closest, is_nearby, all_valid = find_closest_hydrophone(analysis_results, SELECTED)
+    toa_results = results[0]['results']
+    is_valid = valid_sample(toa_results)
     
-    print(f"\n{'='*60}")
-    print(f"CLOSEST HYDROPHONE: {closest}")
-    print(f"IS NEARBY: {is_nearby}")
-    print(f"ALL VALID: {all_valid}")
-    print(f"{'='*60}")
+    is_nearby_val = False
+    if len(results) > 1:
+        nearby_results = results[1]['results']
+        is_nearby_val = nearby(nearby_results)
     
-    return (closest, is_nearby, all_valid)
+    return (is_nearby_val, is_valid, toa_results)
 
 
 def run_voting_ensemble(num_votes_needed=5):
-    """Run main() multiple times and vote on is_nearby result.
+    """Run samples until one outcome gets enough votes.
     
     Collects votes until reaching num_votes_needed of one outcome (True or False).
-    Returns as soon as one outcome gets num_votes_needed votes.
+    Max samples = 3 * num_votes_needed. Returns False if max samples reached.
     
     Args:
-        num_votes_needed: Number of votes needed for either True or False to win
+        num_votes_needed: Number of votes needed to win
         
     Returns:
-        Dict containing:
-            - is_nearby: The outcome that reached num_votes_needed first
-            - votes: List of individual is_nearby votes
-            - nearby_count: How many votes were True
-            - num_valid_samples: Total valid samples collected
+        Dict with is_nearby, votes list, nearby_count, and num_valid_samples
     """
     true_count = 0
     false_count = 0
     votes = []
-    print(f"Collecting votes until one outcome reaches {num_votes_needed}...")
+    max_samples = num_votes_needed * 3
     
-    while True:
-        closest, is_nearby, all_valid = main()
-        if all_valid:
-            votes.append(is_nearby)
-            if is_nearby:
+    print(f"Starting voting ensemble ({num_votes_needed} votes needed, max {max_samples} samples)...")
+    
+    while len(votes) < max_samples:
+        is_nearby_val, is_valid, _ = orchestration_for_one_sample()
+        
+        if is_valid:
+            votes.append(is_nearby_val)
+            if is_nearby_val:
                 true_count += 1
             else:
                 false_count += 1
-            print(f"  Vote {len(votes)}: {is_nearby} (True: {true_count}, False: {false_count})")
             
-            # Check if either outcome has reached the threshold
+            print(f"  Vote {len(votes)}: {is_nearby_val} (True: {true_count}, False: {false_count})")
+            
             if true_count >= num_votes_needed:
-                print(f"Result: True ({true_count} True votes)")
+                print(f"Result: True ({true_count} votes)")
+                SALEAE.close()
                 return {
                     'is_nearby': True,
                     'votes': votes,
                     'nearby_count': true_count,
                     'num_valid_samples': len(votes)
                 }
+            
             if false_count >= num_votes_needed:
-                print(f"Result: False ({false_count} False votes)")
+                print(f"Result: False ({false_count} votes)")
+                SALEAE.close()
                 return {
                     'is_nearby': False,
                     'votes': votes,
@@ -340,7 +206,18 @@ def run_voting_ensemble(num_votes_needed=5):
                     'num_valid_samples': len(votes)
                 }
         else:
-            print("  Invalid, retrying...")
+            print(f"  Invalid sample, retrying...")
+    
+    print(f"Max samples reached. Returning False.")
+    SALEAE.close()
+    return {
+        'is_nearby': False,
+        'votes': votes,
+        'nearby_count': true_count,
+        'num_valid_samples': len(votes)
+    }
+
 
 if __name__ == "__main__":
-    main()
+    result = orchestration_for_one_sample()
+    SALEAE.close()

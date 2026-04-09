@@ -1,5 +1,4 @@
 """Controller module for hydrophone data acquisition and analysis."""
-import os
 import time
 from logic.logic2 import Logic2
 from hydrophones import hydrophone_array
@@ -12,7 +11,7 @@ CAPTURE_NEW_DATA = True
 DATA_FILE = ""
 
 # Whether to use mock device for Logic 2 (True) or real device (False)
-USE_MOCK_DEVICE = False
+USE_MOCK_DEVICE = True
 
 # Duration of capture in seconds (only used if CAPTURE_NEW_DATA = True)
 CAPTURE_TIME = 2
@@ -120,13 +119,12 @@ def nearby(nearby_results):
         nearby_results: List of nearby analysis results
         
     Returns:
-        True if any selected and valid hydrophone detects nearby
+        True if any selected hydrophone detects nearby
     """
     for result in nearby_results:
         idx = result['hydrophone_idx']
-        if SELECTED[idx] and result.get('is_valid', False):
-            if result.get('nearby', False):
-                return True
+        if SELECTED[idx] and result.get('nearby', False):
+            return True
     return False
 
 
@@ -137,22 +135,31 @@ def orchestration_for_one_sample():
         Tuple of (is_nearby, is_valid) from the single sample
     """
     data_path = capture_data()
+    return analyze_one_sample(data_path=data_path)
+
+def analyze_one_sample(data_path: str):
+    """Run single sample through the analysis pipeline.
+    
+    Returns:
+        Tuple of (is_nearby, is_valid, toa_results, nearby_results)
+    """
     load_hydrophone_data(data_path)
     
     results = run_analyzers()
     
     if not results:
-        return (False, False)
+        return (False, False, [], [])
     
     toa_results = results[0]['results']
     is_valid = valid_sample(toa_results)
     
+    nearby_results = []
     is_nearby_val = False
     if len(results) > 1:
         nearby_results = results[1]['results']
         is_nearby_val = nearby(nearby_results)
     
-    return (is_nearby_val, is_valid, toa_results)
+    return (is_nearby_val, is_valid, toa_results, nearby_results)
 
 
 def run_voting_ensemble(num_votes_needed=5):
@@ -167,13 +174,15 @@ def run_voting_ensemble(num_votes_needed=5):
     Returns:
         Dict with is_nearby, votes list
     """
+    start_time = time.time()
+    SALEAE.open()
+    is_nearby = False
     votes = []
     max_attempts = num_votes_needed * 3
     
     print(f"Starting voting ensemble ({num_votes_needed} votes needed, max {max_attempts} attempts)...")
-    
     for attempt in range(1, max_attempts + 1):
-        is_nearby_val, is_valid, _ = orchestration_for_one_sample()
+        is_nearby_val, is_valid, _, _ = orchestration_for_one_sample()
         
         if is_valid:
             votes.append(is_nearby_val)
@@ -190,19 +199,18 @@ def run_voting_ensemble(num_votes_needed=5):
         
         if true_count >= num_votes_needed:
             print(f"Result: True ({true_count} votes)")
-            SALEAE.close()
-            return {'is_nearby': True, 'votes': votes}
-        
+            is_nearby = True
+            break        
         if false_count >= num_votes_needed:
             print(f"Result: False ({false_count} votes)")
-            SALEAE.close()
-            return {'is_nearby': False, 'votes': votes}
+            is_nearby = False
+            break
     
-    print(f"Max attempts reached. Returning False.")
     SALEAE.close()
-    return {'is_nearby': False, 'votes': votes}
-
+    end_time = time.time()
+    print(f"Total Time = {(end_time - start_time):.2f}s")
+    print(f"Average Time = {(((end_time - start_time)/len(votes))):.2f}s")
+    return {'is_nearby': is_nearby, 'votes': votes}
 
 if __name__ == "__main__":
-    result = orchestration_for_one_sample()
-    SALEAE.close()
+    run_voting_ensemble()

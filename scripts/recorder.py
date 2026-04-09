@@ -72,7 +72,8 @@ if __name__ == "__main__":
     # Whether to use mock device for Logic 2 (True) or real device (False)
     USE_MOCK_DEVICE = False
 
-    # Name for this test (0,1,2,3)
+    # Test name with optional tags separated by "_" (e.g., H0, H1, H2, H3, XXFT)
+    # Example: pool_test_H0_10FT indicates H0 is nearest, pinger is 10FT away
     TEST_NAME = "0"
 
     # Number of capture epochs to collect

@@ -8,23 +8,25 @@ class Logic2:
     """Interface for Saleae Logic 2 data acquisition hardware."""
     
     def __init__(self, is_mock=False):
+        self.is_mock = is_mock
+
+    def open(self):
         try:
             self._manager = Manager.launch()
         except Logic2AlreadyRunningError:
             # Manager already running, connect to existing instance
             self._manager = Manager.connect()
         
-        devices = self._manager.get_devices(include_simulation_devices=is_mock)
-        
+        devices = self._manager.get_devices(include_simulation_devices=self.is_mock)
         if not devices:
             self.close()
             raise RuntimeError("No Logic 2 devices found")
 
-        if is_mock:
+        if self.is_mock:
             self._device_id = 'F4244'
         else:
             self._device_id = devices[0].device_id
-    
+
     def close(self):
         """Close the Logic 2 manager."""
         self._manager.close()

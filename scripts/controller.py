@@ -11,7 +11,7 @@ CAPTURE_NEW_DATA = True
 DATA_FILE = ""
 
 # Whether to use mock device for Logic 2 (True) or real device (False)
-USE_MOCK_DEVICE = True
+USE_MOCK_DEVICE = False
 
 # Duration of capture in seconds (only used if CAPTURE_NEW_DATA = True)
 CAPTURE_TIME = 2

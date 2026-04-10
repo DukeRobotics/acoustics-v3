@@ -44,7 +44,7 @@ ANALYZERS = [
         plot_results_flag=False
     ),
     NearbyAnalyzer(
-        ping_width_threshold=0.0147,
+        ping_width_threshold=0.014657,
         crossing_std_dev=5,
         filter_order=6,
         search_band_min=30000,

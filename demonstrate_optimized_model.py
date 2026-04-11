@@ -31,7 +31,7 @@ print(f"\nModel Configuration:")
 print(f"  - Features: {len(features_to_use)}")
 print(f"  - Model: Random Forest Classifier")
 print(f"  - Cross-Validation Accuracy: {accuracy_cv:.2%}")
-print(f"  - Threshold: Distance ≤ 20ft = NEARBY, > 20ft = FAR")
+print(f"  - Threshold: Distance <= 20ft = NEARBY, > 20ft = FAR")
 
 print(f"\nOptimal Features:")
 for i, feat in enumerate(features_to_use, 1):
@@ -106,7 +106,7 @@ for i in range(min(20, len(X_scaled))):
     pred = 'NEARBY' if predictions[i] == 1 else 'FAR'
     conf = confidence[i]
     truth = 'NEARBY' if y_true[i] == 1 else 'FAR'
-    correct = '✓' if predictions[i] == y_true[i] else '✗'
+    correct = 'Y' if predictions[i] == y_true[i] else 'N'
     
     print(f"{i+1:3d} {dist_ft:>7.0f}ft {pred:>12s} {conf:>9.2%} {truth:>8s} {correct:>7s}")
 
@@ -153,12 +153,12 @@ print("="*100)
 # Find hardest cases
 hard_cases = np.where(confidence < 0.75)[0]
 if len(hard_cases) > 0:
-    print(f"\n⚠️  Low confidence predictions: {len(hard_cases)} samples with confidence < 75%")
+    print(f"\nLow confidence predictions: {len(hard_cases)} samples with confidence < 75%")
     print(f"   Suggesting these may be near the decision boundary")
 
 # High confidence correct
 high_conf_correct = ((predictions == y_true) & (confidence > 0.95)).sum()
-print(f"\n✅ High confidence correct: {high_conf_correct} predictions with >95% confidence")
+print(f"\nHigh confidence correct: {high_conf_correct} predictions with >95% confidence")
 
 print(f"\n" + "="*100)
 print("MODEL DEPLOYMENT")

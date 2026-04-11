@@ -37,14 +37,6 @@ valid_idx = X.notna().all(axis=1)
 X = X[valid_idx]
 y = y[valid_idx]
 
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-X_scaled = pd.DataFrame(X_scaled, columns=X.columns)
-
-print("="*100)
-print("TRAINING FINAL OPTIMIZED MODEL")
-print("="*100)
-
 # Optimal features
 OPTIMAL_FEATURES = [
     'H0_RAW_spectral_flatness',
@@ -56,12 +48,22 @@ OPTIMAL_FEATURES = [
     'H0_FILTERED_fwhm_ms',
 ]
 
+# Select only optimal features first
+X = X[OPTIMAL_FEATURES]
+
+# Now scale only the 7 features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+X_scaled = pd.DataFrame(X_scaled, columns=X.columns)
+
+print("="*100)
+print("TRAINING FINAL OPTIMIZED MODEL")
+print("="*100)
+
 print(f"\nOptimal Features ({len(OPTIMAL_FEATURES)}):")
 print("-" * 100)
 for i, feat in enumerate(OPTIMAL_FEATURES, 1):
     print(f"  {i}. {feat}")
-
-X_optimal = X_scaled[OPTIMAL_FEATURES]
 
 # Cross-validation evaluation
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -74,8 +76,8 @@ rf_model = RandomForestClassifier(n_estimators=100, random_state=42, max_depth=1
 gb_model = GradientBoostingClassifier(n_estimators=100, random_state=42, learning_rate=0.1)
 
 # Evaluate both models
-rf_scores = cross_val_score(rf_model, X_optimal, y, cv=cv, scoring='accuracy')
-gb_scores = cross_val_score(gb_model, X_optimal, y, cv=cv, scoring='accuracy')
+rf_scores = cross_val_score(rf_model, X_scaled, y, cv=cv, scoring='accuracy')
+gb_scores = cross_val_score(gb_model, X_scaled, y, cv=cv, scoring='accuracy')
 
 print("\nRandom Forest:")
 print(f"  Mean accuracy: {rf_scores.mean():.4f} ± {rf_scores.std():.4f}")
@@ -102,7 +104,7 @@ print("\n" + "="*100)
 print("TRAINING FINAL MODEL ON FULL DATASET")
 print("="*100)
 
-best_model.fit(X_optimal, y)
+best_model.fit(X_scaled, y)
 
 # Get feature importance
 feature_importance = pd.DataFrame({
@@ -116,8 +118,8 @@ for i, (idx, row) in enumerate(feature_importance.iterrows(), 1):
     print(f"  {i}. {row['feature']:50s} {row['importance']:.4f} ({pct:.1f}%)")
 
 # Test on full data
-y_pred = best_model.predict(X_optimal)
-y_pred_proba = best_model.predict_proba(X_optimal)[:, 1]
+y_pred = best_model.predict(X_scaled)
+y_pred_proba = best_model.predict_proba(X_scaled)[:, 1]
 
 from sklearn.metrics import confusion_matrix, classification_report, roc_auc_score
 cm = confusion_matrix(y, y_pred)

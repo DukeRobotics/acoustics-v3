@@ -28,10 +28,13 @@ def parse_recordings(paths_to_analyze, output_path="analysis"):
     h_fields = []
     for h in hydrophones:
         h_fields.extend([f'{h} TOA', f'{h} VALID', f'{h} REASON', f'{h} IS_NEARBY', f'{h} CONFIDENCE'])
-        # Add optimal features columns (strip H0_ prefix for clean names)
+        # Add optimal features columns (strip H0_ prefix for non-H0 hydrophones)
         for feat in OPTIMAL_FEATURES:
-            clean_feat_name = feat.replace('H0_', '')  # Remove H0_ prefix for generic feature name
-            h_fields.append(f'{h} {clean_feat_name}')
+            if h == 'H0':
+                h_fields.append(f'{h} {feat}')
+            else:
+                clean_feat = feat.replace('H0_', '')
+                h_fields.append(f'{h} {clean_feat}')
     
     fieldnames = base_fields + h_fields
     
@@ -86,8 +89,11 @@ def parse_recordings(paths_to_analyze, output_path="analysis"):
                         optimal_features_dict = nearby.get('optimal_features_values', {})
                         for feat in OPTIMAL_FEATURES:
                             feat_value = optimal_features_dict.get(feat, '')
-                            clean_feat_name = feat.replace('H0_', '')  # Remove H0_ prefix for generic feature name
-                            row[f'{h} {clean_feat_name}'] = feat_value
+                            if h == 'H0':
+                                row[f'{h} {feat}'] = feat_value
+                            else:
+                                clean_feat = feat.replace('H0_', '')
+                                row[f'{h} {clean_feat}'] = feat_value
                 
                 # Append row
                 with open(csv_path, 'a', newline='') as f:

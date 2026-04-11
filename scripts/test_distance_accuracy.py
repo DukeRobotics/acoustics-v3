@@ -2,7 +2,7 @@ import csv
 import sys
 
 csv_file = "analysis/analysis_2026-04-09--02-47-04.csv"
-threshold = float(sys.argv[2]) if len(sys.argv) > 2 else 20
+threshold = 10
 
 tp = tn = fp = fn = valid = total = skipped = 0
 

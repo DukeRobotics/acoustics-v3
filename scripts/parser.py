@@ -14,11 +14,42 @@ def parse_recordings(paths_to_analyze, output_path="analysis"):
     # Column structure
     base_fields = ['PATH', 'CLOSEST_HYDROPHONE', 'DISTANCE', 'ALL_VALID', 'PREDICTED', 'IS_NEARBY']
     hydrophones = ['H0', 'H1', 'H2', 'H3']
+    
+    # Build TOA/Nearby columns
     h_fields = []
     for h in hydrophones:
         h_fields.extend([f'{h} TOA', f'{h} VALID', f'{h} REASON', f'{h} IS_NEARBY', f'{h} PING_WIDTH'])
     
-    fieldnames = base_fields + h_fields
+    # Build feature columns (dynamically discovered from first sample)
+    feature_fields = []
+    feature_results_first = None
+    
+    # Discover features from first epoch
+    for parent_path in paths_to_analyze:
+        if not os.path.exists(parent_path):
+            continue
+        
+        for epoch_folder in sorted([d.name for d in os.scandir(parent_path) if d.is_dir()]):
+            try:
+                is_nearby, is_valid, toa_results, nearby_results, feature_results = analyze_one_sample(
+                    os.path.join(parent_path, epoch_folder)
+                )
+                if feature_results and len(feature_results) > 0:
+                    feature_results_first = feature_results[0]
+                    break
+            except:
+                pass
+        if feature_results_first:
+            break
+    
+    # Build feature field names from first result
+    if feature_results_first:
+        for h_idx in range(4):
+            for feature_name in sorted(feature_results_first.keys()):
+                if feature_name not in ['hydrophone_idx']:
+                    feature_fields.append(f'H{h_idx}_{feature_name}')
+    
+    fieldnames = base_fields + h_fields + feature_fields
     
     # Write header immediately
     with open(csv_path, 'w', newline='') as f:
@@ -37,7 +68,9 @@ def parse_recordings(paths_to_analyze, output_path="analysis"):
         
         for epoch_folder in sorted([d.name for d in os.scandir(parent_path) if d.is_dir()]):
             try:
-                is_nearby, is_valid, toa_results, nearby_results = analyze_one_sample(os.path.join(parent_path, epoch_folder))
+                is_nearby, is_valid, toa_results, nearby_results, feature_results = analyze_one_sample(
+                    os.path.join(parent_path, epoch_folder)
+                )
                 
                 # Build row
                 row = {f: '' for f in fieldnames}
@@ -66,6 +99,16 @@ def parse_recordings(paths_to_analyze, output_path="analysis"):
                         h = f'H{h_idx}'
                         row[f'{h} IS_NEARBY'] = nearby.get('nearby', False)
                         row[f'{h} PING_WIDTH'] = nearby.get('delta_t', '')
+                
+                # Fill feature data
+                for features in feature_results:
+                    h_idx = features.get('hydrophone_idx', -1)
+                    if 0 <= h_idx < 4:
+                        for feature_name, feature_value in features.items():
+                            if feature_name not in ['hydrophone_idx']:
+                                col_name = f'H{h_idx}_{feature_name}'
+                                if col_name in row:
+                                    row[col_name] = feature_value
                 
                 # Append row
                 with open(csv_path, 'a', newline='') as f:

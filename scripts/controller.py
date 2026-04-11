@@ -2,7 +2,7 @@
 import time
 from logic.logic2 import Logic2
 from hydrophones import hydrophone_array
-from analyzers import TOAEnvelopeAnalyzer, NearbyAnalyzer
+from analyzers import TOAEnvelopeAnalyzer, NearbyAnalyzer, FeatureAnalyzer
 
 # Whether to capture new data from Logic hardware (True) or use existing file (False)
 CAPTURE_NEW_DATA = True
@@ -46,6 +46,12 @@ ANALYZERS = [
     NearbyAnalyzer(
         ping_width_threshold=0.014657,
         crossing_std_dev=5,
+        filter_order=6,
+        search_band_min=30000,
+        search_band_max=34000,
+        plot_results_flag=False
+    ),
+    FeatureAnalyzer(
         filter_order=6,
         search_band_min=30000,
         search_band_max=34000,
@@ -141,14 +147,14 @@ def analyze_one_sample(data_path: str):
     """Run single sample through the analysis pipeline.
     
     Returns:
-        Tuple of (is_nearby, is_valid, toa_results, nearby_results)
+        Tuple of (is_nearby, is_valid, toa_results, nearby_results, feature_results)
     """
     load_hydrophone_data(data_path)
     
     results = run_analyzers()
     
     if not results:
-        return (False, False, [], [])
+        return (False, False, [], [], [])
     
     toa_results = results[0]['results']
     is_valid = valid_sample(toa_results)
@@ -159,7 +165,11 @@ def analyze_one_sample(data_path: str):
         nearby_results = results[1]['results']
         is_nearby_val = nearby(nearby_results)
     
-    return (is_nearby_val, is_valid, toa_results, nearby_results)
+    feature_results = []
+    if len(results) > 2:
+        feature_results = results[2]['results']
+    
+    return (is_nearby_val, is_valid, toa_results, nearby_results, feature_results)
 
 
 def run_voting_ensemble(num_votes_needed=5):

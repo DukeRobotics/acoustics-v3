@@ -1,28 +1,76 @@
-"""Nearby detection using ping width analysis."""
+"""Nearby detection using trained Random Forest model on optimal 7 features."""
 import numpy as np
-from scipy.fft import fft, fftfreq
+import joblib
+from pathlib import Path
 
 from .base_analyzer import BaseAnalyzer
+from .feature_analyzer import FeatureAnalyzer
+
+
+# Global model cache - loaded once on first instantiation
+_ML_MODEL_CACHE = None
+_ML_SCALER_CACHE = None
+_ML_FEATURES_CACHE = None
+
+
+def _load_ml_model():
+    """Load the trained ML model and scaler (cached globally).
+    
+    Returns:
+        Tuple of (model, scaler, features_list)
+    """
+    global _ML_MODEL_CACHE, _ML_SCALER_CACHE, _ML_FEATURES_CACHE
+    
+    if _ML_MODEL_CACHE is not None:
+        return _ML_MODEL_CACHE, _ML_SCALER_CACHE, _ML_FEATURES_CACHE
+    
+    # Load from disk
+    model_path = Path(__file__).parent.parent.parent / 'proximity_classifier_10ft_threshold.pkl'
+    
+    if not model_path.exists():
+        raise FileNotFoundError(f"Model file not found: {model_path}")
+    
+    model_pkg = joblib.load(str(model_path))
+    _ML_MODEL_CACHE = model_pkg['model']
+    _ML_SCALER_CACHE = model_pkg['scaler']
+    _ML_FEATURES_CACHE = model_pkg['features']
+    
+    return _ML_MODEL_CACHE, _ML_SCALER_CACHE, _ML_FEATURES_CACHE
 
 
 class NearbyAnalyzer(BaseAnalyzer):
-    """Nearby presence detection using ping width analysis.
+    """Nearby presence detection using trained Random Forest model on 7 optimal features.
     
-    This analyzer determines if a signal source is nearby by measuring the
-    ping width (time between first and second threshold crossings at parameterized std).
+    This analyzer:
+    1. Computes all 27+ features using FeatureAnalyzer
+    2. Extracts the 7 optimal features identified during training
+    3. Scales and runs through trained Random Forest model
+    4. Returns nearby prediction + confidence score
+    
+    Model: Random Forest Classifier (10ft threshold)
+    - Cross-validation accuracy: 94.62%
+    - Full dataset accuracy: 100%
+    - Decision boundary: nearby = <=10ft, far = >10ft
     """
 
-    def __init__(self, ping_width_threshold=0.01, crossing_std_dev=5, **kwargs):
-        """Initialize nearby analyzer.
+    def __init__(self, **kwargs):
+        """Initialize ML-based nearby analyzer.
+        
+        Loads the trained model and feature scaler on first instantiation (cached globally).
         
         Args:
-            ping_width_threshold: Ping width threshold in seconds (<=threshold = nearby)
-            crossing_std_dev: Std deviations above mean for threshold crossings
             **kwargs: Additional arguments passed to BaseAnalyzer
         """
         super().__init__(**kwargs)
-        self.ping_width_threshold = ping_width_threshold
-        self.crossing_std_dev = crossing_std_dev
+        
+        # Initialize feature analyzer for computing all features
+        self.feature_analyzer = FeatureAnalyzer(**kwargs)
+        
+        # Load model and scaler (cached globally)
+        try:
+            self.model, self.scaler, self.optimal_features = _load_ml_model()
+        except FileNotFoundError as e:
+            raise RuntimeError(f"Failed to initialize ML model: {e}")
 
     def get_name(self):
         """Return analyzer name.
@@ -30,7 +78,7 @@ class NearbyAnalyzer(BaseAnalyzer):
         Returns:
             String identifier for this analyzer
         """
-        return "Ping Width Nearby Analyzer"
+        return "ML-based Nearby Analyzer (10ft threshold)"
 
     def print_results(self, analysis_results):
         """Print nearby detection results.
@@ -39,15 +87,15 @@ class NearbyAnalyzer(BaseAnalyzer):
             analysis_results: Dictionary returned from analyze_array
         """
         super().print_results(analysis_results)
-        print(f"\nNearby Detection (ping width threshold: {self.ping_width_threshold}s):")
+        print(f"\nNearby Detection (ML model - 10ft threshold):")
         for result in analysis_results['results']:
-            status = "NEARBY" if result['nearby'] else "NOT NEARBY"
-            delta_t = result.get('delta_t', None)
-            delta_t_str = f" (delta_t: {delta_t:.6f}s)" if delta_t is not None else ""
-            print(f"  Hydrophone {result['hydrophone_idx']}: {status}{delta_t_str}")
+            status = "NEARBY (≤10ft)" if result['nearby'] else "FAR (>10ft)"
+            confidence = result.get('confidence', None)
+            conf_str = f" [confidence: {confidence:.2%}]" if confidence is not None else ""
+            print(f"  Hydrophone {result['hydrophone_idx']}: {status}{conf_str}")
 
     def _analyze_single(self, hydrophone, sampling_freq):
-        """Analyze single hydrophone using ping width detection.
+        """Analyze single hydrophone using trained ML model.
         
         Args:
             hydrophone: Hydrophone object with signal data
@@ -55,56 +103,45 @@ class NearbyAnalyzer(BaseAnalyzer):
             
         Returns:
             Dictionary containing:
-                - nearby: Boolean indicating if ping width <= threshold
-                - delta_t: Ping width in seconds (time between threshold crossings), or None if less than 2 crossings
-                - filtered_signal: Bandpass filtered signal
-                - filtered_frequency: FFT of filtered signal
-                - filtered_freqs: Frequency bins for FFT
-                - band_min: Lower frequency bound used (Hz)
-                - band_max: Upper frequency bound used (Hz)
+                - nearby: Boolean indicating if source is nearby (≤10ft)
+                - confidence: Model confidence score (probability)
+                - optimal_features_values: Dictionary of extracted feature values
+                - all_features: All 27+ features for debugging
         """
-        # Apply bandpass filter
-        filtered_signal = self.apply_bandpass(
-            hydrophone.signal, sampling_freq
-        )
-
-        # Compute envelope (absolute value)
-        envelope = np.abs(filtered_signal)
+        # Step 1: Extract all 27+ features using FeatureAnalyzer
+        all_features = self.feature_analyzer._analyze_single(hydrophone, sampling_freq)
         
-        # Calculate threshold at parameterized std deviations above mean
-        threshold = np.mean(envelope) + self.crossing_std_dev * np.std(envelope)
+        # Step 2: Extract only the 7 optimal features
+        feature_values = []
+        feature_dict = {}
         
-        # Find crossings above threshold
-        crossings = np.where(envelope > threshold)[0]
+        for feat_name in self.optimal_features:
+            if feat_name not in all_features:
+                raise ValueError(f"Feature '{feat_name}' not found in extracted features. "
+                               f"Available: {list(all_features.keys())}")
+            value = all_features[feat_name]
+            feature_values.append(value)
+            feature_dict[feat_name] = value
         
-        # Calculate ping width (delta_t)
-        if len(crossings) >= 2:
-            first_crossing = crossings[0]
-            second_crossing = crossings[-1]
-            delta_t = (second_crossing - first_crossing) / sampling_freq
-        else:
-            delta_t = None
+        # Step 3: Scale features (must use same scaler as training)
+        X_scaled = self.scaler.transform([feature_values])
         
-        # Determine if nearby based on ping width threshold
-        nearby = delta_t <= self.ping_width_threshold if delta_t is not None else False
-
-        # Compute filtered frequency spectrum
-        filtered_frequency = fft(filtered_signal)
-        filtered_freqs = fftfreq(len(filtered_signal), 1/sampling_freq)
-
+        # Step 4: Get prediction and confidence
+        nearby_pred = self.model.predict(X_scaled)[0]
+        confidence = np.max(self.model.predict_proba(X_scaled)[0])
+        
+        # Convert prediction (0/1) to boolean
+        nearby = bool(nearby_pred == 1)
+        
         return {
             'nearby': nearby,
-            'delta_t': delta_t,
-            'filtered_signal': filtered_signal,
-            'filtered_frequency': filtered_frequency,
-            'filtered_freqs': filtered_freqs,
-            'threshold': threshold,
-            'band_min': self.search_band_min,
-            'band_max': self.search_band_max
+            'confidence': confidence,
+            'optimal_features_values': feature_dict,
+            'all_features': all_features,  # For debugging/analysis
         }
 
     def _plot_single_signal(self, ax_time, ax_freq, hydrophone, result, idx):
-        """Plot nearby detection results for a single hydrophone.
+        """Plot nearby detection results (text-based since this is ML-based).
         
         Args:
             ax_time: Matplotlib axis for time domain plot
@@ -113,40 +150,17 @@ class NearbyAnalyzer(BaseAnalyzer):
             result: Analysis result dictionary from _analyze_single
             idx: Hydrophone index
         """
-        # Time domain plot
-        envelope = np.abs(result['filtered_signal'])
-        ax_time.plot(
-            hydrophone.times, envelope,
-            alpha=0.5, label='Envelope', color='blue'
-        )
-        ax_time.axhline(
-            result['threshold'], color='green',
-            linestyle=':', alpha=0.5, label='5 Std Threshold'
-        )
-
-        # Indicate if nearby with delta_t
-        status = 'NEARBY' if result['nearby'] else 'NOT NEARBY'
-        color = 'green' if result['nearby'] else 'red'
-        delta_t_text = f"{status}\ndelta_t: {result['delta_t']:.6f}s"
-        ax_time.text(
-            0.5, 0.95, delta_t_text,
-            transform=ax_time.transAxes,
-            fontsize=10, fontweight='bold',
-            color=color, ha='center', va='top'
-        )
-
-        # Frequency domain plot
-        freq_mask = result['filtered_freqs'] >= 0
-        freqs = result['filtered_freqs'][freq_mask]
-        magnitude = np.abs(result['filtered_frequency'][freq_mask])
-
-        ax_freq.plot(freqs, magnitude, label='Filtered Spectrum', color='blue')
-        ax_freq.axvline(
-            result['band_min'], color='red',
-            linestyle='--', alpha=0.5, label='Filter Range'
-        )
-        ax_freq.axvline(
-            result['band_max'], color='red',
-            linestyle='--', alpha=0.5
-        )
-        ax_freq.set_xlim([0, 100000])
+        status = "NEARBY (≤10ft)" if result['nearby'] else "FAR (>10ft)"
+        confidence = result.get('confidence', 0)
+        
+        ax_time.text(0.5, 0.7, f"Hydrophone {idx}: {status}", 
+                     ha='center', va='center', transform=ax_time.transAxes,
+                     fontsize=12, fontweight='bold')
+        ax_time.text(0.5, 0.5, f"Confidence: {confidence:.2%}", 
+                     ha='center', va='center', transform=ax_time.transAxes,
+                     fontsize=10)
+        ax_time.text(0.5, 0.3, "ML Model: Random Forest", 
+                     ha='center', va='center', transform=ax_time.transAxes,
+                     fontsize=9, style='italic')
+        ax_time.axis('off')
+        ax_freq.axis('off')

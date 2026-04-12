@@ -11,31 +11,13 @@ def parse_recordings(paths_to_analyze, output_path="analysis"):
     timestamp = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
     csv_path = os.path.join(output_path, f"analysis_{timestamp}.csv")
     
-    # Define the 7 optimal features used by the ML model
-    OPTIMAL_FEATURES = [
-        'H0_RAW_spectral_flatness',
-        'H0_FILTERED_spectral_centroid_hz',
-        'H0_FILTERED_time_to_secondary_peak_ms',
-        'H0_RAW_rise_time_ms',
-        'H0_RAW_spectral_centroid_hz',
-        'H0_FILTERED_rise_time_ms',
-        'H0_FILTERED_fwhm_ms',
-    ]
-    
     # Column structure
     base_fields = ['PATH', 'CLOSEST_HYDROPHONE', 'DISTANCE', 'ALL_VALID', 'PREDICTED', 'IS_NEARBY']
     hydrophones = ['H0', 'H1', 'H2', 'H3']
     h_fields = []
     for h in hydrophones:
         h_fields.extend([f'{h} TOA', f'{h} VALID', f'{h} REASON', f'{h} IS_NEARBY', f'{h} CONFIDENCE'])
-        # Add optimal features columns (strip H0_ prefix for non-H0 hydrophones)
-        for feat in OPTIMAL_FEATURES:
-            if h == 'H0':
-                h_fields.append(f'{h} {feat}')
-            else:
-                clean_feat = feat.replace('H0_', '')
-                h_fields.append(f'{h} {clean_feat}')
-    
+   
     fieldnames = base_fields + h_fields
     
     # Write header immediately
@@ -83,18 +65,7 @@ def parse_recordings(paths_to_analyze, output_path="analysis"):
                     if 0 <= h_idx < 4:
                         h = f'H{h_idx}'
                         row[f'{h} IS_NEARBY'] = nearby.get('nearby', False)
-                        row[f'{h} CONFIDENCE'] = nearby.get('confidence', '')
-                        
-                        # Extract optimal features
-                        optimal_features_dict = nearby.get('optimal_features_values', {})
-                        for feat in OPTIMAL_FEATURES:
-                            feat_value = optimal_features_dict.get(feat, '')
-                            if h == 'H0':
-                                row[f'{h} {feat}'] = feat_value
-                            else:
-                                clean_feat = feat.replace('H0_', '')
-                                row[f'{h} {clean_feat}'] = feat_value
-                
+                        row[f'{h} CONFIDENCE'] = nearby.get('confidence', '')               
                 # Append row
                 with open(csv_path, 'a', newline='') as f:
                     csv.DictWriter(f, fieldnames=fieldnames).writerow(row)

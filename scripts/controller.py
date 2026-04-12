@@ -44,6 +44,7 @@ ANALYZERS = [
         plot_results_flag=False
     ),
     NearbyAnalyzer(
+        model_path='artifacts/proximity_classifier_10ft_threshold_2026-04-11--13-31-12.pkl',
         filter_order=6,
         search_band_min=30000,
         search_band_max=34000,
@@ -121,7 +122,7 @@ def nearby(nearby_results):
     """
     for result in nearby_results:
         idx = result['hydrophone_idx']
-        if SELECTED[idx] and result.get('nearby', False):
+        if SELECTED[idx] and result.get('is_nearby', False):
             return True
     return False
 
@@ -160,7 +161,7 @@ def analyze_one_sample(data_path: str):
     return (is_nearby_val, is_valid, toa_results, nearby_results)
 
 
-def run_voting_ensemble(num_votes_needed=5):
+def run_voting_ensemble(num_votes_needed=3):
     """Run samples until one outcome gets enough votes.
     
     Collects votes until reaching num_votes_needed of one outcome (True or False).

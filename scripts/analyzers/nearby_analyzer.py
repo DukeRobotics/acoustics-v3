@@ -1,167 +1,105 @@
-"""ML-based nearby detection using H0 features."""
-import warnings
-import numpy as np
-import pandas as pd
+
+
 import joblib
-from pathlib import Path
+import numpy as np
+from scipy.signal import hilbert
 from scipy.fft import fft, fftfreq
-from scipy import signal as scipy_signal
-
+import scipy.signal as sp_signal
+import pandas as pd
 from .base_analyzer import BaseAnalyzer
-
-warnings.filterwarnings('ignore', message='.*does not have valid feature names.*')
-
-_ML_MODEL = None
-_ML_SCALER = None
-_ML_FEATURES = None
-
-
-def _load_model():
-    global _ML_MODEL, _ML_SCALER, _ML_FEATURES
-    if _ML_MODEL is not None:
-        return _ML_MODEL, _ML_SCALER, _ML_FEATURES
-    
-    path = Path(__file__).parent.parent.parent / 'proximity_classifier_10ft_threshold.pkl'
-    if not path.exists():
-        raise FileNotFoundError(f"Model not found: {path}")
-    
-    pkg = joblib.load(str(path))
-    _ML_MODEL = pkg['model']
-    _ML_SCALER = pkg['scaler']
-    _ML_FEATURES = pkg['features']
-    return _ML_MODEL, _ML_SCALER, _ML_FEATURES
 
 
 class NearbyAnalyzer(BaseAnalyzer):
-    """ML-based nearby detection (≤10ft) on H0 features."""
+    """ML-based nearby detection (≤10ft) using 4 key features."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, model_path: str, **kwargs):
         super().__init__(**kwargs)
-        self.model, self.scaler, self.optimal_features = _load_model()
+        pkg = joblib.load(model_path)
+        self.model = pkg['model']
+        self.features = pkg['features']  # Feature names in order
+        print(f"Model features: {self.features}")
 
     def get_name(self):
-        return "ML-based Nearby Analyzer (10ft threshold)"
+        return "ML-based Nearby Detection (10ft)"
 
-    def _extract_features(self, signal, sampling_freq):
-        """Extract all features from signal."""
+    def _analyze_single(self, hydrophone, sampling_freq):
+        """Extract 4 features and predict if nearby."""
+        signal = hydrophone.signal
         filtered = self.apply_bandpass(signal, sampling_freq)
         
-        raw_env = np.abs(scipy_signal.hilbert(signal))
-        filt_env = np.abs(scipy_signal.hilbert(filtered))
+        # Compute envelopes
+        env_raw = np.abs(hilbert(signal))
+        env_filt = np.abs(hilbert(filtered))
+        peak_raw = np.argmax(env_raw)
+        peak_filt = np.argmax(env_filt)
         
-        peak_raw = np.argmax(raw_env)
-        peak_filt = np.argmax(filt_env)
+        # Extract 4 features
+        flatness = self._spectral_flatness(signal)
+        centroid = self._spectral_centroid(filtered, sampling_freq)
+        rise_time = self._rise_time(env_raw, sampling_freq, peak_raw)
+        sec_peak = self._secondary_peak(env_filt, sampling_freq, peak_filt, rise_time)
         
-        filt_temp = self._temporal(filt_env, sampling_freq, peak_filt)
-        raw_temp = self._temporal(raw_env, sampling_freq, peak_raw)
-        filt_spec = self._spectral(filtered, sampling_freq)
-        raw_spec = self._spectral(signal, sampling_freq)
-        filt_multi = self._multipath(filt_env, sampling_freq, peak_filt, filt_temp['pulse_width_ms'])
-        
-        feats = {}
-        for k, v in filt_temp.items():
-            feats[f"H0_FILTERED_{k}"] = v
-        for k, v in filt_spec.items():
-            feats[f"H0_FILTERED_{k}"] = v
-        for k, v in filt_multi.items():
-            feats[f"H0_FILTERED_{k}"] = v
-        for k, v in raw_temp.items():
-            feats[f"H0_RAW_{k}"] = v
-        for k, v in raw_spec.items():
-            feats[f"H0_RAW_{k}"] = v
-        
-        return feats
-
-    def _temporal(self, env, fs, peak):
-        peak_val = env[peak]
-        thresh_10 = peak_val * 0.1
-        thresh_50 = peak_val * 0.5
-        
-        i_10_rise = next((i for i in range(peak, -1, -1) if env[i] < thresh_10), peak)
-        i_10_fall = next((i for i in range(peak, len(env)) if env[i] < thresh_10), peak)
-        i_50_before = next((i for i in range(peak, -1, -1) if env[i] < thresh_50), 0)
-        i_50_after = next((i for i in range(peak, len(env)) if env[i] < thresh_50 and i > peak), len(env)-1)
+        # Prepare for model
+        X = pd.DataFrame(
+            [[flatness, centroid, sec_peak, rise_time]], 
+            columns=self.features
+        )
+        pred = self.model.predict(X)[0]
+        prob = np.max(self.model.predict_proba(X)[0])
         
         return {
-            'rise_time_ms': (peak - i_10_rise) / fs * 1000,
-            'fall_time_ms': (i_10_fall - peak) / fs * 1000,
-            'fwhm_ms': (i_50_after - i_50_before) / fs * 1000,
-            'pulse_width_ms': (i_10_fall - i_10_rise) / fs * 1000,
+            'is_nearby': bool(pred),
+            'confidence': float(prob),
+            'feature_values': {
+                'RAW_spectral_flatness': flatness,
+                'FILTERED_spectral_centroid_hz': centroid,
+                'FILTERED_time_to_secondary_peak_ms': sec_peak,
+                'RAW_rise_time_ms': rise_time,
+            }
         }
 
-    def _spectral(self, sig, fs):
+    def _spectral_flatness(self, sig):
+        spec = np.abs(fft(sig))
+        geom = np.exp(np.mean(np.log(spec + 1e-10)))
+        arith = np.mean(spec)
+        return geom / (arith + 1e-10)
+
+    def _spectral_centroid(self, sig, fs):
         spec = np.abs(fft(sig))
         freqs = fftfreq(len(sig), 1/fs)
         pos = freqs >= 0
-        f_pos = freqs[pos]
-        s_pos = spec[pos]
-        
-        peak_f = f_pos[np.argmax(s_pos)]
-        centroid = np.sum(f_pos * s_pos) / (np.sum(s_pos) + 1e-10)
-        geom = np.exp(np.mean(np.log(s_pos + 1e-10)))
-        arith = np.mean(s_pos)
-        flatness = geom / (arith + 1e-10)
-        
-        return {
-            'spectral_centroid_hz': centroid,
-            'spectral_flatness': flatness,
-            'peak_frequency_hz': peak_f,
-        }
+        return np.sum(freqs[pos] * spec[pos]) / (np.sum(spec[pos]) + 1e-10)
 
-    def _multipath(self, env, fs, peak, pw_ms):
-        pw_s = (pw_ms if pw_ms else 0.05) / 1000
-        late_start = int(peak + pw_s * 1.5 * fs)
-        late_end = min(int(peak + pw_s * 4 * fs), len(env))
+    def _rise_time(self, env, fs, peak):
+        thresh = env[peak] * 0.1
+        i_start = next((i for i in range(peak, -1, -1) if env[i] < thresh), peak)
+        return (peak - i_start) / fs * 1000
+
+    def _secondary_peak(self, env, fs, peak, rise_ms):
+        pw = rise_ms / 1000
+        start = int(peak + pw * 1.5 * fs)
+        end = min(int(peak + pw * 4 * fs), len(env))
         
-        if late_start >= late_end:
-            return {'time_to_secondary_peak_ms': 0}
+        if start >= end:
+            return 0
         
-        late = env[late_start:late_end]
-        peaks, props = scipy_signal.find_peaks(late, height=np.max(late) * 0.1)
-        
+        peaks, _ = sp_signal.find_peaks(env[start:end], height=np.max(env[start:end]) * 0.1)
         if len(peaks) == 0:
-            return {'time_to_secondary_peak_ms': 0}
+            return 0
         
-        t_to_sec = (late_start + peaks[0] - peak) / fs * 1000
-        return {'time_to_secondary_peak_ms': t_to_sec}
-
-    def _analyze_single(self, hydrophone, sampling_freq):
-        """Not used - we override analyze_array."""
-        return {}
+        return (start + peaks[0] - peak) / fs * 1000
 
     def _plot_single_signal(self, ax_time, ax_freq, hydrophone, result, idx):
-        """Not implemented."""
-        pass
+        """Plot filtered signal with prediction."""
+        signal = hydrophone.signal
+        filtered = self.apply_bandpass(signal, 1 / hydrophone.sampling_period)
+        ax_time.plot(filtered)
+        nearby_label = "NEARBY" if result['is_nearby'] else "FAR"
+        ax_time.set_title(f"H{idx} - {nearby_label} ({result['confidence']:.1%})")
 
-    def analyze_array(self, hydrophone_array, selected=None):
-        """Extract H0 features and run model, return for all hydrophones."""
-        if selected is None:
-            selected = hydrophone_array.selected
-        
-        # Extract features from H0 only
-        h0 = hydrophone_array.hydrophones[0]
-        fs = 1 / h0.sampling_period
-        all_feats = self._extract_features(h0.signal, fs)
-        
-        # Get 7 optimal features
-        feat_vec = [all_feats[f] for f in self.optimal_features]
-        feat_dict = {f: all_feats[f] for f in self.optimal_features}
-        
-        # Predict
-        X_df = pd.DataFrame([feat_vec], columns=self.optimal_features)
-        X_scaled = self.scaler.transform(X_df)
-        is_nearby = bool(self.model.predict(X_scaled)[0])
-        confidence = float(np.max(self.model.predict_proba(X_scaled)[0]))
-        
-        # Return for all selected hydrophones
-        results = []
-        for idx, is_sel in enumerate(selected):
-            if is_sel:
-                results.append({
-                    'hydrophone_idx': idx,
-                    'nearby': is_nearby,
-                    'confidence': confidence,
-                    'optimal_features_values': feat_dict,
-                })
-        
-        return {'results': results, 'analyzer': self.get_name()}
+    def print_results(self, analysis_results):
+        """Print prediction for each hydrophone."""
+        print(f"\n{analysis_results['analyzer']}")
+        for r in analysis_results['results']:
+            label = "NEARBY" if r['is_nearby'] else "FAR"
+            print(f"  H{r.get('hydrophone_idx')}: {label} ({r['confidence']:.1%})")

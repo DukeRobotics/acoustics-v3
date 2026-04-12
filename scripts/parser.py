@@ -16,7 +16,11 @@ def parse_recordings(paths_to_analyze, output_path="analysis"):
     hydrophones = ['H0', 'H1', 'H2', 'H3']
     h_fields = []
     for h in hydrophones:
-        h_fields.extend([f'{h} TOA', f'{h} VALID', f'{h} REASON', f'{h} IS_NEARBY', f'{h} CONFIDENCE'])
+        h_fields.extend([
+            f'{h} TOA', f'{h} VALID', f'{h} REASON', f'{h} IS_NEARBY', f'{h} CONFIDENCE',
+            f'{h} RAW_spectral_flatness', f'{h} FILTERED_spectral_centroid_hz',
+            f'{h} FILTERED_time_to_secondary_peak_ms', f'{h} RAW_rise_time_ms'
+        ])
    
     fieldnames = base_fields + h_fields
     
@@ -64,8 +68,15 @@ def parse_recordings(paths_to_analyze, output_path="analysis"):
                     h_idx = nearby.get('hydrophone_idx', -1)
                     if 0 <= h_idx < 4:
                         h = f'H{h_idx}'
-                        row[f'{h} IS_NEARBY'] = nearby.get('nearby', False)
-                        row[f'{h} CONFIDENCE'] = nearby.get('confidence', '')               
+                        row[f'{h} IS_NEARBY'] = nearby.get('is_nearby', False)
+                        row[f'{h} CONFIDENCE'] = nearby.get('confidence', '')
+                        
+                        # Extract feature values
+                        feat_vals = nearby.get('feature_values', {})
+                        row[f'{h} RAW_spectral_flatness'] = feat_vals.get('RAW_spectral_flatness', '')
+                        row[f'{h} FILTERED_spectral_centroid_hz'] = feat_vals.get('FILTERED_spectral_centroid_hz', '')
+                        row[f'{h} FILTERED_time_to_secondary_peak_ms'] = feat_vals.get('FILTERED_time_to_secondary_peak_ms', '')
+                        row[f'{h} RAW_rise_time_ms'] = feat_vals.get('RAW_rise_time_ms', '')               
                 # Append row
                 with open(csv_path, 'a', newline='') as f:
                     csv.DictWriter(f, fieldnames=fieldnames).writerow(row)

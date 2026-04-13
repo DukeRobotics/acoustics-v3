@@ -6,8 +6,8 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # CONFIG
-CSV_PATH = 'analysis/analysis_2026-04-11--13-31-12.csv'
-MODEL_SAVE_PATH = 'artifacts/proximity_classifier_10ft_threshold_2026-04-11--13-31-12.pkl'
+CSV_PATH = 'analysis/analysis_2026-04-12--14-13-52.csv'
+MODEL_SAVE_PATH = 'artifacts/proximity_classifier_10ft_threshold_2026-04-12--23-04-00.pkl'
 THRESHOLD_FT = 10
 N_ESTIMATORS = 100
 MAX_DEPTH = 10

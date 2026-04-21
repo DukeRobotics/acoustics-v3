@@ -171,7 +171,7 @@ def threaded_capture_data(capture_data_paths_queue, stop_event, num_captures_lis
             data_path = capture_data()
             capture_data_paths_queue.put(data_path)
             num_captures_list[0] += 1
-            time.sleep(0.1)
+            time.sleep(0.5)
         except Exception:
             break  
 

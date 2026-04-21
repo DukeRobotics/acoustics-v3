@@ -1,8 +1,13 @@
 """Controller module for hydrophone data acquisition and analysis."""
 import time
+import threading
+import queue
 from logic.logic2 import Logic2
 from hydrophones import hydrophone_array
 from analyzers import TOAEnvelopeAnalyzer, NearbyAnalyzer
+
+# Limit concurrent analysis threads to prevent GIL contention and excessive context switching
+MAX_CONCURRENT_ANALYSIS_THREADS = 3
 
 # Whether to capture new data from Logic hardware (True) or use existing file (False)
 CAPTURE_NEW_DATA = True
@@ -52,14 +57,8 @@ ANALYZERS = [
     ),
 ]
 
-# TODO: Write a comment
+# Create a global logic object.
 SALEAE = Logic2(is_mock=USE_MOCK_DEVICE)
-
-# TODO: Write a comment
-ARRAY = hydrophone_array.HydrophoneArray(
-    sampling_freq=SAMPLING_FREQ,
-    selected=SELECTED
-)
 
 def capture_data(prefix: str = ""):
     if not prefix:
@@ -74,12 +73,12 @@ def capture_data(prefix: str = ""):
     )
     return data_path
 
-def load_hydrophone_data(data_path: str):
-    ARRAY.load_from_path(data_path, True)
+def load_hydrophone_data(data_path: str, array):
+    array.load_from_path(data_path, True)
     if PLOT_DATA:
-        ARRAY.plot_hydrophones()
+        array.plot_hydrophones()
 
-def run_analyzers():
+def run_analyzers(array):
     """Run all configured analyzers on hydrophone array.
     
     Returns:
@@ -88,7 +87,7 @@ def run_analyzers():
     results = []
     for analyzer in ANALYZERS:
         print(f"\n{'='*60}")
-        analysis_result = analyzer.analyze_array(ARRAY)
+        analysis_result = analyzer.analyze_array(array)
         analyzer.print_results(analysis_result)
         results.append(analysis_result)
     return results
@@ -127,24 +126,19 @@ def nearby(nearby_results):
     return False
 
 
-def orchestration_for_one_sample():
-    """Run single sample through capture and analysis pipeline.
-    
-    Returns:
-        Tuple of (is_nearby, is_valid) from the single sample
-    """
-    data_path = capture_data()
-    return analyze_one_sample(data_path=data_path)
-
 def analyze_one_sample(data_path: str):
     """Run single sample through the analysis pipeline.
     
     Returns:
         Tuple of (is_nearby, is_valid, toa_results, nearby_results)
     """
-    load_hydrophone_data(data_path)
+    array = hydrophone_array.HydrophoneArray(
+        sampling_freq=SAMPLING_FREQ,
+        selected=SELECTED
+    )
+    load_hydrophone_data(data_path, array)
     
-    results = run_analyzers()
+    results = run_analyzers(array)
     
     if not results:
         return (False, False, [], [])
@@ -161,63 +155,130 @@ def analyze_one_sample(data_path: str):
     return (is_nearby_val, is_valid, toa_results, nearby_results)
 
 
-def run_voting_ensemble(num_votes_needed=3):
-    """Run samples until one outcome gets enough votes.
+def orchestration_for_one_sample():
+    """Run single sample through capture and analysis pipeline.
     
-    Collects votes until reaching num_votes_needed of one outcome (True or False).
-    Max samples = 3 * num_votes_needed. Returns False if max samples reached.
-    
-    Args:
-        num_votes_needed: Number of votes needed to win
-        
     Returns:
-        Dict with is_nearby, votes list, confidences list
+        Tuple of (is_nearby, is_valid) from the single sample
     """
+    data_path = capture_data()
+    return analyze_one_sample(data_path=data_path)
+
+def threaded_capture_data(capture_data_paths_queue, stop_event, num_captures_list):
+    """Continuously capture data until stop_event is set."""
+    while not stop_event.is_set():
+        try:
+            data_path = capture_data()
+            capture_data_paths_queue.put(data_path)
+            num_captures_list[0] += 1
+            time.sleep(0.1)
+        except Exception:
+            break  
+
+
+def threaded_analyze_one_sample(data_path, results_queue, semaphore):
+    """Analyze one sample and put result in queue."""
+    semaphore.acquire()
+    try:
+        result = analyze_one_sample(data_path)
+        results_queue.put(result)
+    finally:
+        semaphore.release()
+
+def cleanup(start_time, votes, confidences, stop_event, analysis_threads, capture_data_thread, num_captures_list):
+    """Clean up resources and print timing statistics."""
+    end_time = time.time()
+    stop_event.set()
+    # Wait for capture thread to finish
+    capture_data_thread.join(timeout=2)
+    # Wait for analysis threads to finish (max 1 second per thread)
+    for thread in analysis_threads:
+        thread.join(timeout=1)
+    SALEAE.close()
+    print(f"Total Time = {(end_time - start_time):.2f}s")
+    print(f"Number of Captures = {num_captures_list[0]}")
+    print(f"Total Votes = {len(votes)}")
+    print(f"Votes = {votes}")
+    print(f"Confidences = {confidences}")
+    if votes:
+        print(f"Average Time = {(((end_time - start_time)/len(votes))):.2f}s")
+
+def run_voting_ensemble(num_votes_needed=3, timeout=60):
     start_time = time.time()
     SALEAE.open()
     is_nearby = False
     votes = []
     confidences = []
-    max_attempts = num_votes_needed * 3
+    num_captures_list = [0]
+    capture_data_paths_queue = queue.Queue()
+    results_queue = queue.Queue()
+    analysis_threads = []
+
+    analysis_thread_semaphore = threading.Semaphore(MAX_CONCURRENT_ANALYSIS_THREADS)
+    stop_event = threading.Event()
     
-    print(f"Starting voting ensemble ({num_votes_needed} votes needed, max {max_attempts} attempts)...")
-    for attempt in range(1, max_attempts + 1):
-        is_nearby_val, is_valid, _, nearby_results = orchestration_for_one_sample()
-        
-        confidence = None
-        if is_valid and nearby_results:
-            confidence = nearby_results[0].get('confidence', None)
-        
-        if is_valid:
-            votes.append(is_nearby_val)
-            confidences.append(confidence)
-        else:
-            votes.append(None)
-            confidences.append(None)
-        
-        true_count = votes.count(True)
-        false_count = votes.count(False)
-        
-        if is_valid:
-            conf_str = f" [confidence: {confidence:.2%}]" if confidence is not None else ""
-            print(f"  Vote {len(votes)}: {is_nearby_val}{conf_str} (True: {true_count}, False: {false_count})")
-        else:
-            print(f"  Invalid sample, retrying... ({attempt}/{max_attempts})")
-        
-        if true_count >= num_votes_needed:
-            print(f"Result: True ({true_count} votes)")
-            is_nearby = True
-            break        
-        if false_count >= num_votes_needed:
-            print(f"Result: False ({false_count} votes)")
-            is_nearby = False
-            break
+    def timeout_handler():
+        stop_event.set()
     
-    SALEAE.close()
-    end_time = time.time()
-    print(f"Total Time = {(end_time - start_time):.2f}s")
-    print(f"Average Time = {(((end_time - start_time)/len(votes))):.2f}s")
-    return {'is_nearby': is_nearby, 'votes': votes, 'confidences': confidences}
+    timeout_timer = threading.Timer(timeout, timeout_handler)
+    timeout_timer.daemon = True
+    timeout_timer.start()
+
+    capture_data_thread = threading.Thread(
+        target=threaded_capture_data, 
+        args=(capture_data_paths_queue, stop_event, num_captures_list), 
+        daemon=True
+    )
+    capture_data_thread.start()
+
+    while True:
+        # Check if timeout fired
+        if stop_event.is_set():
+            cleanup(start_time, votes, confidences, stop_event, analysis_threads, capture_data_thread, num_captures_list)
+            return {'is_nearby': is_nearby, 'votes': votes, 'confidences': confidences}
+        
+        while True:
+            if results_queue.empty():
+                break
+
+            is_nearby_val, is_valid, _, nearby_results = results_queue.get()
+            
+            confidence = None
+            if is_valid and nearby_results:
+                confidence = nearby_results[0].get('confidence', None)
+            
+            if is_valid:
+                votes.append(is_nearby_val)
+                confidences.append(confidence)
+            else:
+                votes.append(None)
+                confidences.append(None)
+            
+            true_count = votes.count(True)
+            false_count = votes.count(False)
+            
+            if is_valid:
+                conf_str = f" [confidence: {confidence:.2%}]" if confidence is not None else ""
+                print(f"  Vote {len(votes)}: {is_nearby_val}{conf_str} (True: {true_count}, False: {false_count})")
+            else:
+                print("  Invalid sample")
+            
+            if true_count >= num_votes_needed:
+                print(f"Result: True ({true_count} votes)")
+                is_nearby = True
+                cleanup(start_time, votes, confidences, stop_event, analysis_threads, capture_data_thread, num_captures_list)
+                return {'is_nearby': is_nearby, 'votes': votes, 'confidences': confidences}
+            if false_count >= num_votes_needed:
+                print(f"Result: False ({false_count} votes)")
+                is_nearby = False
+                cleanup(start_time, votes, confidences, stop_event, analysis_threads, capture_data_thread, num_captures_list)
+                return {'is_nearby': is_nearby, 'votes': votes, 'confidences': confidences}
+            
+        if not capture_data_paths_queue.empty():
+            analyze_thread = threading.Thread(target=threaded_analyze_one_sample, args=(capture_data_paths_queue.get(),results_queue,analysis_thread_semaphore), daemon=True)
+            analysis_threads.append(analyze_thread)
+            analyze_thread.start()
+        time.sleep(0.5)
 
 if __name__ == "__main__":
     run_voting_ensemble()

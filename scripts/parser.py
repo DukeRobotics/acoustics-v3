@@ -6,9 +6,14 @@ from datetime import datetime
 from controller import analyze_one_sample
 
 
-def parse_recordings(paths_to_analyze, output_path="analysis"):
+_SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+_DEFAULT_OUTPUT = os.path.join(_SCRIPTS_DIR, '..', 'analysis')
+
+
+def parse_recordings(paths_to_analyze, output_path=_DEFAULT_OUTPUT):
     """Parse all recordings in given paths and write to CSV."""
     timestamp = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
+    os.makedirs(output_path, exist_ok=True)
     csv_path = os.path.join(output_path, f"analysis_{timestamp}.csv")
     
     # Column structure
@@ -47,7 +52,7 @@ def parse_recordings(paths_to_analyze, output_path="analysis"):
         for h_idx in range(4):
             for feature_name in sorted(feature_results_first.keys()):
                 if feature_name not in ['hydrophone_idx']:
-                    feature_fields.append(f'H{h_idx}_{feature_name}')
+                    feature_fields.append(f'H{h_idx} {feature_name}')
     
     fieldnames = base_fields + h_fields + feature_fields
     
@@ -106,7 +111,7 @@ def parse_recordings(paths_to_analyze, output_path="analysis"):
                     if 0 <= h_idx < 4:
                         for feature_name, feature_value in features.items():
                             if feature_name not in ['hydrophone_idx']:
-                                col_name = f'H{h_idx}_{feature_name}'
+                                col_name = f'H{h_idx} {feature_name}'
                                 if col_name in row:
                                     row[col_name] = feature_value
                 
@@ -123,11 +128,11 @@ def parse_recordings(paths_to_analyze, output_path="analysis"):
 
 if __name__ == "__main__":
     paths_to_analyze = [
-        "data/2.22.2026/H0_Closest_0FT_2026-02-22--15-29-08",
-        "data/2.22.2026/H0_Closest_10FT_2026-02-22--15-35-26",
-        "data/2.22.2026/H0_Closest_20FT_2026-02-22--15-41-55",
-        "data/2.22.2026/H0_Closest_30FT_2026-02-22--15-47-28",
-        "data/2.22.2026/H0_Closest_40FT_2026-02-22--15-53-23",
+        "C:\\Users\\suvas\\Documents\\acoustics-v3\\data\\2.22.2026\\H0_Closest_0FT_2026-02-22--15-29-08",
+        "C:\\Users\\suvas\\Documents\\acoustics-v3\\data\\2.22.2026\\H0_Closest_10FT_2026-02-22--15-35-26",
+        "C:\\Users\\suvas\\Documents\\acoustics-v3\\data\\2.22.2026\\H0_Closest_20FT_2026-02-22--15-41-55",
+        "C:\\Users\\suvas\\Documents\\acoustics-v3\\data\\2.22.2026\\H0_Closest_30FT_2026-02-22--15-47-28",
+        "C:\\Users\\suvas\\Documents\\acoustics-v3\\data\\2.22.2026\\H0_Closest_40FT_2026-02-22--15-53-23",
     ]
     
     parse_recordings(paths_to_analyze)

@@ -223,7 +223,7 @@ def cleanup(start_time, votes, confidences, stop_event, capture_data_thread, num
     if votes:
         print(f"Average Time = {(((end_time - start_time)/len(votes))):.2f}s")
 
-def run_voting_ensemble(num_votes_needed=3, timeout=60):
+def run_voting_ensemble(num_votes_needed=2, timeout=60):
     start_time = time.time()
     SALEAE.open()
     is_nearby = False

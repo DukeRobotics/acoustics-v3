@@ -1,5 +1,23 @@
+# Python cache
 __pycache__/
 *.pyc
+
+# macOS system files
 .DS_Store
-Temp_Data/
+
+# Virtual environments
+venv/
 .venv/
+.logic2/
+
+# IDE / Editor settings
+.vscode/
+
+# Logic software files
+Logic_Software/squashfs-root
+Logic-*
+
+# Project data directories
+Temp_Data/
+Data/
+Analysis/

@@ -78,7 +78,7 @@ if __name__ == "__main__":
     TEST_NAME = "H0_20ft_32kHz"
 
     # Number of capture epochs to collect
-    EPOCHS = 25
+    EPOCHS = 200
 
     # Sampling frequency in Hz for data acquisition
     SAMPLING_FREQ = 781250

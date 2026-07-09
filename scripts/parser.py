@@ -67,7 +67,7 @@ def parse_recordings(paths_to_analyze, output_path=_DEFAULT_OUTPUT):
         
         parent_name = os.path.basename(parent_path)
         closest_h = re.search(r'(H\d)', parent_name).group(1) if re.search(r'(H\d)', parent_name) else None
-        distance = re.search(r'(\d+FT)', parent_name).group(1) if re.search(r'(\d+FT)', parent_name) else None
+        distance = re.search(r'(\d+ft)', parent_name, re.IGNORECASE).group(1).upper() if re.search(r'(\d+ft)', parent_name, re.IGNORECASE) else None
         
         print(f"\nProcessing: {parent_name}")
         
@@ -97,7 +97,7 @@ def parse_recordings(paths_to_analyze, output_path=_DEFAULT_OUTPUT):
                         row[f'{h} VALID'] = toa.get('is_valid', False)
                         row[f'{h} REASON'] = toa.get('validity_reason', '')
                 
-                # Fill nearby data
+                # Fill nearby data (with ML model confidence and features)
                 for nearby in nearby_results:
                     h_idx = nearby.get('hydrophone_idx', -1)
                     if 0 <= h_idx < 4:
@@ -128,11 +128,10 @@ def parse_recordings(paths_to_analyze, output_path=_DEFAULT_OUTPUT):
 
 if __name__ == "__main__":
     paths_to_analyze = [
-        "C:\\Users\\suvas\\Documents\\acoustics-v3\\data\\2.22.2026\\H0_Closest_0FT_2026-02-22--15-29-08",
-        "C:\\Users\\suvas\\Documents\\acoustics-v3\\data\\2.22.2026\\H0_Closest_10FT_2026-02-22--15-35-26",
-        "C:\\Users\\suvas\\Documents\\acoustics-v3\\data\\2.22.2026\\H0_Closest_20FT_2026-02-22--15-41-55",
-        "C:\\Users\\suvas\\Documents\\acoustics-v3\\data\\2.22.2026\\H0_Closest_30FT_2026-02-22--15-47-28",
-        "C:\\Users\\suvas\\Documents\\acoustics-v3\\data\\2.22.2026\\H0_Closest_40FT_2026-02-22--15-53-23",
+        "data/4.11.2026/H0_5ft_t1_2026-04-11--15-27-13",
+        "data/4.11.2026/H0_10ft_t1_2026-04-11--15-32-45",
+        "data/4.11.2026/H0_15ft_t1_2026-04-11--15-38-49",
+        "data/4.11.2026/H0_20ft_t1_2026-04-11--15-45-46",
     ]
     
     parse_recordings(paths_to_analyze)

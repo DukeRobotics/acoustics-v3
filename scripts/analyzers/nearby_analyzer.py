@@ -1,4 +1,11 @@
 """Feature extraction for all 27 acoustic features."""
+
+import joblib
+import numpy as np
+from scipy.signal import hilbert
+from scipy.fft import fft, fftfreq
+import scipy.signal as sp_signal
+import pandas as pd
 from .base_analyzer import BaseAnalyzer
 from .feature_analyzer import FeatureAnalyzer
 

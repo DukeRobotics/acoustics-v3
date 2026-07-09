@@ -50,6 +50,7 @@ ANALYZERS = [
         plot_results_flag=False
     ),
     FeatureAnalyzer(
+        model_path='scripts/artifacts/proximity_classifier_10ft_threshold_2026-04-12--23-04-00.pkl',
         filter_order=6,
         search_band_min=30000,
         search_band_max=34000,
@@ -127,7 +128,7 @@ def nearby(nearby_results):
     """
     for result in nearby_results:
         idx = result['hydrophone_idx']
-        if SELECTED[idx] and result.get('nearby', False):
+        if SELECTED[idx] and result.get('is_nearby', False):
             return True
     return False
 
@@ -170,7 +171,7 @@ def analyze_one_sample(data_path: str):
     return (is_nearby_val, is_valid, toa_results, nearby_results, feature_results)
 
 
-def run_voting_ensemble(num_votes_needed=5):
+def run_voting_ensemble(num_votes_needed=3):
     """Run samples until one outcome gets enough votes.
     
     Collects votes until reaching num_votes_needed of one outcome (True or False).
@@ -180,28 +181,36 @@ def run_voting_ensemble(num_votes_needed=5):
         num_votes_needed: Number of votes needed to win
         
     Returns:
-        Dict with is_nearby, votes list
+        Dict with is_nearby, votes list, confidences list
     """
     start_time = time.time()
     SALEAE.open()
     is_nearby = False
     votes = []
+    confidences = []
     max_attempts = num_votes_needed * 3
     
     print(f"Starting voting ensemble ({num_votes_needed} votes needed, max {max_attempts} attempts)...")
     for attempt in range(1, max_attempts + 1):
-        is_nearby_val, is_valid, _, _ = orchestration_for_one_sample()
+        is_nearby_val, is_valid, _, nearby_results = orchestration_for_one_sample()
+        
+        confidence = None
+        if is_valid and nearby_results:
+            confidence = nearby_results[0].get('confidence', None)
         
         if is_valid:
             votes.append(is_nearby_val)
+            confidences.append(confidence)
         else:
             votes.append(None)
+            confidences.append(None)
         
         true_count = votes.count(True)
         false_count = votes.count(False)
         
         if is_valid:
-            print(f"  Vote {len(votes)}: {is_nearby_val} (True: {true_count}, False: {false_count})")
+            conf_str = f" [confidence: {confidence:.2%}]" if confidence is not None else ""
+            print(f"  Vote {len(votes)}: {is_nearby_val}{conf_str} (True: {true_count}, False: {false_count})")
         else:
             print(f"  Invalid sample, retrying... ({attempt}/{max_attempts})")
         
@@ -218,7 +227,7 @@ def run_voting_ensemble(num_votes_needed=5):
     end_time = time.time()
     print(f"Total Time = {(end_time - start_time):.2f}s")
     print(f"Average Time = {(((end_time - start_time)/len(votes))):.2f}s")
-    return {'is_nearby': is_nearby, 'votes': votes}
+    return {'is_nearby': is_nearby, 'votes': votes, 'confidences': confidences}
 
 if __name__ == "__main__":
     run_voting_ensemble()

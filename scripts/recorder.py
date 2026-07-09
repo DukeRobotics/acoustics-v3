@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     # Test name with optional tags separated by "_" (e.g., H0, H1, H2, H3, XXFT)
     # Example: pool_test_H0_10FT indicates H0 is nearest, pinger is 10FT away
-    TEST_NAME = "H0_5ft_t1"
+    TEST_NAME = "H0_20ft_32kHz"
 
     # Number of capture epochs to collect
     EPOCHS = 25

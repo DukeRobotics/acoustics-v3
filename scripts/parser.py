@@ -128,10 +128,10 @@ def parse_recordings(paths_to_analyze, output_path=_DEFAULT_OUTPUT):
 
 if __name__ == "__main__":
     paths_to_analyze = [
-        "data/4.11.2026/H0_5ft_t1_2026-04-11--15-27-13",
-        "data/4.11.2026/H0_10ft_t1_2026-04-11--15-32-45",
-        "data/4.11.2026/H0_15ft_t1_2026-04-11--15-38-49",
-        "data/4.11.2026/H0_20ft_t1_2026-04-11--15-45-46",
+        "data/7.9.2026/H0_5ft_32kHz_2026-07-09--18-19-56",
+        "data/7.9.2026/H0_10ft_32kHz_2026-07-09--18-26-43",
+        "data/7.9.2026/H0_15ft_32kHz_2026-07-09--18-38-31",
+        "data/7.9.2026/H0_20ft_32kHz_2026-07-09--18-46-01",
     ]
     
     parse_recordings(paths_to_analyze)

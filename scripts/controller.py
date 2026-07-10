@@ -60,7 +60,6 @@ ANALYZERS = [
         plot_results_flag=False
     ),
     FeatureAnalyzer(
-        model_path='scripts/artifacts/proximity_classifier_10ft_threshold_2026-04-12--23-04-00.pkl',
         filter_order=6,
         search_band_min=30000,
         search_band_max=34000,

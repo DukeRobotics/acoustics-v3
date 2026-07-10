@@ -3,3 +3,6 @@ __pycache__/
 .DS_Store
 Temp_Data/
 .venv/
+.logic2/
+venv/
+Logic_Software/

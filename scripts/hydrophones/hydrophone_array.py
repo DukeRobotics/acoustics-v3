@@ -108,9 +108,10 @@ class HydrophoneArray:
         hydro.times = times
         hydro.signal = signal - np.mean(signal)
         
-        # Use hydrophone-specific sampling period for FFT
-        hydro.freqs = fftfreq(len(hydro.signal), hydro.sampling_period)
-        hydro.frequency = fft(hydro.signal)
+        # Note: FFT computation is deferred to plot_hydrophones() for performance.
+        # Analyzers compute their own FFT on filtered signals, not raw data.
+        hydro.freqs = None
+        hydro.frequency = None
 
     def _reset_hydrophones(self):
         for hydro in self.hydrophones:
@@ -233,7 +234,11 @@ class HydrophoneArray:
                 axes[plot_idx, 0].set_title(f'Hydrophone {i} - Signal')
                 axes[plot_idx, 0].grid(True, alpha=0.3)
 
-                # Frequency domain
+                # Frequency domain - compute FFT lazily only for plotting
+                if hydro.frequency is None:
+                    hydro.freqs = fftfreq(len(hydro.signal), hydro.sampling_period)
+                    hydro.frequency = fft(hydro.signal)
+                
                 freq_mask = hydro.freqs >= 0
                 freqs = hydro.freqs[freq_mask]
                 magnitude = np.abs(hydro.frequency[freq_mask])

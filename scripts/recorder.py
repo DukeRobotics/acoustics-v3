@@ -37,6 +37,7 @@ def collect_batch_data(
     if is_logic_2:
         from logic.logic2 import Logic2
         logic_interface = Logic2(is_mock=is_mock)
+        logic_interface.open()
     else:
         logic_interface = logic.Logic(sampling_freq=sampling_freq)
         logic_interface.print_saleae_status()
@@ -74,19 +75,19 @@ if __name__ == "__main__":
 
     # Test name with optional tags separated by "_" (e.g., H0, H1, H2, H3, XXFT)
     # Example: pool_test_H0_10FT indicates H0 is nearest, pinger is 10FT away
-    TEST_NAME = "0"
+    TEST_NAME = "H0_20ft_32kHz"
 
     # Number of capture epochs to collect
-    EPOCHS = 100
+    EPOCHS = 200
 
     # Sampling frequency in Hz for data acquisition
     SAMPLING_FREQ = 781250
 
     # Duration of each capture in seconds
-    CAPTURE_TIME = 2
+    CAPTURE_TIME = 0.5
 
     # Base directory for saving captured data
-    OUTPUT_PATH = "Temp_Data"
+    OUTPUT_PATH = "data/7.9.2026"
 
     # ==================== EXECUTION ====================
 

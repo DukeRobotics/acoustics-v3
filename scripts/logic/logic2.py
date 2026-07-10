@@ -12,7 +12,7 @@ class Logic2:
 
     def open(self):
         try:
-            self._manager = Manager.launch()
+            self._manager = Manager.launch("/home/robot/acoustics-v3/Logic_Software/Logic-2.4.44-linux-x64.AppImage")
         except Logic2AlreadyRunningError:
             # Manager already running, connect to existing instance
             self._manager = Manager.connect()

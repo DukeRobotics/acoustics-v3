@@ -90,12 +90,31 @@ class NearbyAnalyzer(BaseAnalyzer):
         return (start + peaks[0] - peak) / fs * 1000
 
     def _plot_single_signal(self, ax_time, ax_freq, hydrophone, result, idx):
-        """Plot filtered signal with prediction."""
+        """Plot signal and frequency content for a nearby/far prediction."""
         signal = hydrophone.signal
         filtered = self.apply_bandpass(signal, 1 / hydrophone.sampling_period)
-        ax_time.plot(filtered)
+
+        # Time-domain plot
+        ax_time.plot(hydrophone.times, signal, alpha=0.5, label='Raw Signal', color='gray')
+        ax_time.plot(hydrophone.times, filtered, label='Filtered Signal', color='blue', linewidth=2)
+
         nearby_label = "NEARBY" if result['is_nearby'] else "FAR"
         ax_time.set_title(f"H{idx} - {nearby_label} ({result['confidence']:.1%})")
+        ax_time.set_ylabel('Amplitude')
+        ax_time.grid(True, alpha=0.3)
+
+        # Frequency-domain plot
+        sample_period = hydrophone.sampling_period
+        freqs = np.fft.rfftfreq(len(signal), d=sample_period)
+        raw_mag = np.abs(np.fft.rfft(signal))
+        filt_mag = np.abs(np.fft.rfft(filtered))
+
+        ax_freq.plot(freqs, raw_mag, alpha=0.5, label='Raw FFT', color='gray')
+        ax_freq.plot(freqs, filt_mag, label='Filtered FFT', color='blue', linewidth=2)
+        ax_freq.set_xlim([0, 100000])
+        ax_freq.set_ylabel('Magnitude')
+        ax_freq.set_xlabel('Frequency (Hz)')
+        ax_freq.grid(True, alpha=0.3)
 
     def print_results(self, analysis_results):
         """Print prediction for each hydrophone."""

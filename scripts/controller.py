@@ -85,11 +85,11 @@ def load_hydrophone_data(data_path: str, array):
         old_stdout = sys.stdout
         sys.stdout = StringIO()
         try:
-            array.load_from_path(data_path, True)
+            array.load_from_path(data_path)
         finally:
             sys.stdout = old_stdout
     else:
-        array.load_from_path(data_path, True)
+        array.load_from_path(data_path)
     
     if PLOT_DATA:
         array.plot_hydrophones()

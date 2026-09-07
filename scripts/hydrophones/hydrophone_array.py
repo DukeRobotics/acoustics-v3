@@ -32,77 +32,11 @@ class HydrophoneArray:
             hydrophone_module.Hydrophone()
         ]
 
-    def load_from_path(self, path: str, is_logic_2: bool = False) -> None:
-        """Load hydrophone data from a file or directory.
-        
-        Args:
-            path: Path to data file (.bin or .csv) or directory (for Logic 2)
-            is_logic_2: If True, use Logic 2 parser for directory; if False, use Logic 1 parser
-        """
-        # For Logic 2, expect a directory with analog bin files
-        if is_logic_2 and os.path.isdir(path):
-            self._load_from_logic2_directory(path)
-        else:
-            # For Logic 1, expect a single file
-            ext = os.path.splitext(path)[1].lower()
-            if ext == ".bin":
-                self._load_from_bin(path)
-            elif ext == ".csv":
-                self._load_from_csv(path)
-            else:
-                raise ValueError(f"Unsupported file type: {ext}. Expected .bin or .csv")
-
-    def _load_from_csv(self, path: str) -> None:
-        self._reset_hydrophones()
-
-        skip_rows = 0
-        with open(path, 'r', encoding='utf-8') as f:
-            for i, line in enumerate(f):
-                parts = line.strip().split(',')
-                try:
-                    float(parts[0])
-                    skip_rows = i
-                    break
-                except ValueError:
-                    continue
-
-        data = pd.read_csv(path, skiprows=skip_rows, header=None)
-
-        times = data.iloc[:, 0].to_numpy()
-        
-        # Calculate sampling period from all time deltas
-        if len(times) > 1:
-            sampling_period = (times[-1] - times[0]) / (len(times) - 1)
-        else:
-            sampling_period = self.sampling_period
-        
-        for idx, hydro in enumerate(self.hydrophones):
-            hydro.sampling_period = sampling_period
-            self._update_hydrophone(
-                hydro, times, data.iloc[:, idx + 1].to_numpy()
-            )
-
-    def _load_from_bin(self, path: str) -> None:
-        self._reset_hydrophones()
-
-        with open(path, "rb") as f:
-            # Read header: 8 bytes uint64, 4 bytes uint32, 8 bytes double
-            header = f.read(8 + 4 + 8)
-            num_samples, num_channels, sample_period = struct.unpack(
-                "<QId", header
-            )
-            if sample_period:
-                self.sampling_period = float(sample_period)
-            # read all float32 samples
-            total_floats = num_samples * num_channels
-            float_bytes = f.read(total_floats * 4)
-            data = np.frombuffer(float_bytes, dtype="<f4")
-            data = data.reshape((num_channels, num_samples))
-
-        times = np.arange(num_samples, dtype=np.float64) * self.sampling_period
-        for idx, hydro in enumerate(self.hydrophones):
-            hydro.sampling_period = float(self.sampling_period)
-            self._update_hydrophone(hydro, times, data[idx])
+    def load_from_path(self, path: str) -> None:
+        """Load a Logic 2 capture directory."""
+        if not os.path.isdir(path):
+            raise ValueError(f"Expected a Logic 2 capture directory: {path}")
+        self._load_from_logic2_directory(path)
 
     def _update_hydrophone(self, hydro, times, signal):
         hydro.times = times
@@ -168,9 +102,9 @@ class HydrophoneArray:
                     csv_file = os.path.join(directory, filename)
                     break
 
-        # If CSV found, load it (same format as Logic 1)
+        # Logic 2 can export either a combined CSV or per-channel binaries.
         if csv_file:
-            self._load_from_csv(csv_file)
+            self._load_logic2_csv(csv_file)
             print(f"Loaded Logic 2 data from CSV: {os.path.basename(csv_file)}")
             return
 
@@ -215,6 +149,33 @@ class HydrophoneArray:
 
                 except Exception as e:
                     print(f"Error loading {analog_file}: {e}")
+
+    def _load_logic2_csv(self, path: str) -> None:
+        self._reset_hydrophones()
+
+        skip_rows = 0
+        with open(path, 'r', encoding='utf-8') as f:
+            for i, line in enumerate(f):
+                parts = line.strip().split(',')
+                try:
+                    float(parts[0])
+                    skip_rows = i
+                    break
+                except ValueError:
+                    continue
+
+        data = pd.read_csv(path, skiprows=skip_rows, header=None)
+        times = data.iloc[:, 0].to_numpy()
+        sampling_period = (
+            (times[-1] - times[0]) / (len(times) - 1)
+            if len(times) > 1 else self.sampling_period
+        )
+
+        for idx, hydro in enumerate(self.hydrophones):
+            hydro.sampling_period = sampling_period
+            self._update_hydrophone(
+                hydro, times, data.iloc[:, idx + 1].to_numpy()
+            )
 
 
     def plot_hydrophones(self):

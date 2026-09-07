@@ -44,7 +44,7 @@ class Logic2:
         
         Returns:
             dict with paths to exported files
-            Parent path of exported files. Common between Logic 1 and Logic 2
+            Parent path of exported files.
         """
         # Create output directory with absolute path
         output_dir = os.path.abspath(os.path.join(base_dir, prefix))

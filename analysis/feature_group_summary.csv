@@ -1,0 +1,3 @@
+group,H0 RAW_spectral_flatness count,H0 RAW_spectral_flatness mean,H0 RAW_spectral_flatness median,H0 RAW_spectral_flatness std,H0 FILTERED_spectral_centroid_hz count,H0 FILTERED_spectral_centroid_hz mean,H0 FILTERED_spectral_centroid_hz median,H0 FILTERED_spectral_centroid_hz std,H0 RAW_rise_time_ms count,H0 RAW_rise_time_ms mean,H0 RAW_rise_time_ms median,H0 RAW_rise_time_ms std
+Far,268,0.358756,0.362357,0.040824,268,31962.338322,31961.466344,34.442490,268,2.883563,2.753280,1.378117
+Nearby,179,0.252239,0.241490,0.033917,179,32032.962504,32034.905522,55.066041,179,2.597127,3.111680,1.714135

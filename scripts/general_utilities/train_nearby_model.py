@@ -7,7 +7,7 @@ warnings.filterwarnings('ignore')
 
 # CONFIG
 CSV_PATH = 'analysis/analysis_2026-04-12--14-13-52.csv'
-MODEL_SAVE_PATH = 'artifacts/proximity_classifier_10ft_threshold_2026-04-12--23-04-00.pkl'
+MODEL_SAVE_PATH = 'scripts/artifacts/proximity_classifier_10ft_threshold_2026-04-12--23-04-00.pkl'
 THRESHOLD_FT = 10
 N_ESTIMATORS = 100
 MAX_DEPTH = 10
@@ -15,7 +15,6 @@ MAX_DEPTH = 10
 FEATURES = [
     'H0 RAW_spectral_flatness',
     'H0 FILTERED_spectral_centroid_hz',
-    'H0 FILTERED_time_to_secondary_peak_ms',
     'H0 RAW_rise_time_ms',
 ]
 

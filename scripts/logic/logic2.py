@@ -11,11 +11,11 @@ class Logic2:
         self.is_mock = is_mock
 
     def open(self):
-        try:
-            self._manager = Manager.launch("/home/robot/acoustics-v3/Logic_Software/Logic-2.4.44-linux-x64.AppImage")
-        except Logic2AlreadyRunningError:
+        # try:
+        #     self._manager = Manager.launch("/home/robot/acoustics-v3/Logic_Software/Logic-2.4.44-linux-x64.AppImage")
+        # except Logic2AlreadyRunningError:
             # Manager already running, connect to existing instance
-            self._manager = Manager.connect()
+        self._manager = Manager.connect()
         
         devices = self._manager.get_devices(include_simulation_devices=self.is_mock)
         if not devices:

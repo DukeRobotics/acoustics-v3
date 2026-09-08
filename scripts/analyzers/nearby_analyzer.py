@@ -15,6 +15,8 @@ class NearbyAnalyzer(BaseAnalyzer):
         super().__init__(**kwargs)
         pkg = joblib.load(model_path)
         self.model = pkg['model']
+        if hasattr(self.model, 'n_jobs'):
+            self.model.n_jobs = 1
         self.features = pkg['features']  # Feature names in order
         print(f"Model features: {self.features}")
 

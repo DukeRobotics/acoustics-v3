@@ -2,7 +2,7 @@
 
 Python tools for recording four-channel hydrophone data with Saleae Logic 2 and classifying whether an acoustic source is nearby.
 
-The current pipeline is Logic 2 only. It supports live voting, offline analysis of saved captures, and training a nearby/far Random Forest model.
+The current pipeline is based on Logic 2 data recording and file format. It supports live voting, offline analysis of saved captures, and training a nearby/far Random Forest model.
 
 ## Pipeline
 
@@ -15,17 +15,12 @@ Logic 2 capture
     -> result dictionaries or analysis CSV
 ```
 
-Hydrophones are processed independently. The controller currently combines results with simple rules:
-
-- Every selected hydrophone must pass TOA validation.
-- Any selected hydrophone classified as nearby makes the recording nearby.
-- The default selection is H0 only.
+Hydrophones are processed independently
 
 ## Requirements
 
-- Python 3.10 or newer
-- Saleae Logic 2 and the Saleae automation package
-- A Logic 2 device, or the Logic 2 simulation device when using mock mode
+- Saleae Logic 2 and the Saleae automation server enabled
+- A Logic 2 device, or `USE_MOCK_DEVICE=True` when using mock mode
 
 Install Python dependencies from the repository root:
 
@@ -71,7 +66,7 @@ Important configuration values are near the top of the file:
 - `ANALYZERS`: the configured TOA and nearby analyzers.
 - `SAMPLING_FREQ`: capture sample rate.
 - `CAPTURE_TIME`: duration of each capture.
-- `MAX_CONCURRENT_ANALYSIS_THREADS`: maximum number of simultaneous sample analyses.
+- `MAX_CONCURRENT_ANALYSIS_PROCESSES`: maximum number of simultaneous sample analyses.
 - `USE_MOCK_DEVICE`: use the Logic 2 simulation device instead of hardware.
 
 The active nearby model is loaded from:

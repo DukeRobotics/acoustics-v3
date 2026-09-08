@@ -9,7 +9,7 @@ from .base_analyzer import BaseAnalyzer
 
 
 class NearbyAnalyzer(BaseAnalyzer):
-    """ML-based nearby detection (≤10ft) using 4 key features."""
+    """ML-based nearby detection (≤10ft) using three signal features."""
 
     def __init__(self, model_path: str, **kwargs):
         super().__init__(**kwargs)
@@ -24,7 +24,7 @@ class NearbyAnalyzer(BaseAnalyzer):
         return "ML-based Nearby Detection (10ft)"
 
     def _analyze_single(self, hydrophone, sampling_freq):
-        """Extract 4 features and predict if nearby."""
+        """Extract the model features and predict whether the source is nearby."""
         signal = hydrophone.signal
         filtered = self.apply_bandpass(signal, sampling_freq)
         
